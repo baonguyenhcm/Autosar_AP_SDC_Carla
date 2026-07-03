@@ -74,11 +74,22 @@ if(AP_BACKEND STREQUAL "adaptive-autosar")
   target_compile_definitions(safe_stop_app PRIVATE AP_HAVE_ARA)
   target_link_libraries(safe_stop_app PRIVATE av_cores ${ARA_LIBS})
 
-  # Gateway: ara::com (to the AAs, SOME/IP) + lwrcl/CycloneDDS (to CARLA, ROS 2 wire).
+  # Gateway is SPLIT so the ara::com (vsomeip stub dds/) and real CycloneDDS (ddscxx) header
+  # trees never live in the same translation unit — they collide if mixed:
+  #   carla_bridge      = ara::com side (SOME/IP), no ROS/CycloneDDS headers (AP_HAVE_ARA).
+  #   carla_gateway.cpp = ROS 2 / lwrcl side, no ara::com headers.
+  # ARA_LIBS is linked PRIVATE to the static bridge, so the executable links the ara .so's
+  # at link time WITHOUT inheriting their (vsomeip) include directories.
+  add_library(carla_bridge STATIC ${SRC}/av_gateway/src/carla_bridge.cpp)
+  target_include_directories(carla_bridge
+    PUBLIC  ${SRC}/av_gateway/include
+    PRIVATE ${AV_INCLUDES})
+  target_compile_definitions(carla_bridge PRIVATE AP_HAVE_ARA)
+  target_link_libraries(carla_bridge PRIVATE ${ARA_LIBS})
+
   add_executable(carla_gateway ${SRC}/av_gateway/src/carla_gateway_node.cpp)
   target_include_directories(carla_gateway PRIVATE ${AV_INCLUDES} ${GW_ROS_INCLUDES})
-  target_compile_definitions(carla_gateway PRIVATE AP_HAVE_ARA)
-  target_link_libraries(carla_gateway PRIVATE av_cores ${ARA_LIBS} ${GW_ROS_LIBS})
+  target_link_libraries(carla_gateway PRIVATE carla_bridge ${GW_ROS_LIBS})
 
   install(TARGETS localization_app perception_app planning_app control_app
                   safe_stop_app carla_gateway RUNTIME DESTINATION bin)
