@@ -57,7 +57,19 @@ if(AP_BACKEND STREQUAL "adaptive-autosar")
   set(LWRCL_PREFIX      "/opt/cyclonedds-libs" CACHE PATH "lwrcl (cyclonedds) install prefix")
   set(CYCLONEDDS_PREFIX "/opt/cyclonedds"      CACHE PATH "CycloneDDS runtime prefix")
   link_directories(${LWRCL_PREFIX}/lib ${CYCLONEDDS_PREFIX}/lib)
-  set(GW_ROS_INCLUDES ${LWRCL_PREFIX}/include ${CYCLONEDDS_PREFIX}/include)
+  # CycloneDDS-CXX (ddscxx) installs its C++ headers under include/ddscxx --
+  # that is where <dds/dds.hpp> lives, so it must be on the include path too.
+  set(GW_ROS_INCLUDES ${LWRCL_PREFIX}/include
+                      ${CYCLONEDDS_PREFIX}/include
+                      ${CYCLONEDDS_PREFIX}/include/ddscxx)
+  # If CycloneDDS was built with SHM (ENABLE_SHM=ON), dds.hpp may pull in
+  # iceoryx headers -- add them when present.
+  set(ICEORYX_PREFIX "/opt/iceoryx" CACHE PATH "iceoryx prefix (CycloneDDS SHM)")
+  if(EXISTS "${ICEORYX_PREFIX}/include")
+    list(APPEND GW_ROS_INCLUDES ${ICEORYX_PREFIX}/include)
+    file(GLOB _iox_dirs "${ICEORYX_PREFIX}/include/iceoryx/v*")
+    list(APPEND GW_ROS_INCLUDES ${_iox_dirs})
+  endif()
   set(GW_ROS_LIBS lwrcl carla_msgs sensor_msgs nav_msgs geometry_msgs std_msgs
                   builtin_interfaces ddscxx ddsc pthread)
 
