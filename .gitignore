@@ -1,0 +1,42 @@
+# ---- Build output (CMake / colcon / make) ----
+build/
+build_*/
+**/build/
+**/build_ap/
+**/build_demo/
+cmake-build-*/
+install/
+log/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+!**/src/**/Makefile
+*.cmake
+!CMakeLists.txt
+
+# ---- Compiled objects / binaries ----
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.exe
+*.out
+a.out
+
+# ---- Generated / runtime artifacts ----
+av_trace.csv
+*.log
+core
+*.pyc
+__pycache__/
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>av-stack &middot; 2D ego viewer</title>
+<style>
+  :root {
+    --bg:#0e1116; --panel:#161b22; --line:#30363d; --text:#e6edf3;
+    --muted:#8b949e; --teal:#2dd4bf; --red:#f87171; --amber:#fbbf24;
+    --ghost:#60a5fa; --road:#20262e; --lane:#c9d1d9;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif; }
+  header { padding:10px 16px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0; letter-spacing:.5px; font-weight:600; }
+  header .tag { color:var(--teal); }
+  header .hint { color:var(--muted); font-size:12px; }
+  #wrap { display:grid; grid-template-columns:1fr 260px; gap:12px; padding:12px 16px; }
+  @media (max-width:820px){ #wrap{ grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; }
+  #stage { position:relative; overflow:hidden; }
+  canvas { display:block; width:100%; }
+  #overview { height:54px; border-bottom:1px solid var(--line); }
+  #drop { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:10px; background:rgba(14,17,22,.86); text-align:center; padding:24px;
+    transition:opacity .2s; }
+  #drop.hide { opacity:0; pointer-events:none; }
+  #drop p { margin:0; color:var(--muted); font-size:13px; max-width:360px; line-height:1.5; }
+  #drop strong { color:var(--text); }
+  .btn { background:#21262d; color:var(--text); border:1px solid var(--line);
+    padding:7px 12px; border-radius:7px; font-size:13px; cursor:pointer; }
+  .btn:hover { border-color:var(--teal); }
+  .btn.primary { background:var(--teal); color:#04201c; border-color:var(--teal); font-weight:600; }
+  #controls { display:flex; align-items:center; gap:10px; padding:10px 12px; border-top:1px solid var(--line);
+    flex-wrap:wrap; }
+  #scrub { flex:1; min-width:160px; accent-color:var(--teal); }
+  select, #controls label { font-size:12px; color:var(--muted); }
+  select { background:#21262d; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:4px 6px; }
+  .hud { padding:12px 14px; }
+  .hud h2 { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted);
+    margin:0 0 8px; font-weight:600; }
+  .row { display:flex; justify-content:space-between; font-variant-numeric:tabular-nums;
+    font-size:13px; padding:3px 0; }
+  .row .k { color:var(--muted); }
+  .bar { height:8px; background:#0d1117; border:1px solid var(--line); border-radius:5px; overflow:hidden; margin:3px 0 8px; }
+  .bar > div { height:100%; width:0; }
+  .fill-teal{ background:var(--teal);} .fill-red{ background:var(--red);} .fill-amber{ background:var(--amber);}
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); padding:2px 14px 12px; }
+  .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px;
+    margin-right:5px; vertical-align:middle; }
+  .lg-ego::before{ background:var(--teal);} .lg-ghost::before{ background:var(--ghost);}
+  .lg-obs::before{ background:var(--red);} .lg-trail::before{ background:#3f6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>av-stack <span class="tag">&middot;</span> 2D ego viewer</h1>
+  <span class="hint" id="fileName">no trace loaded</span>
+  <span style="flex:1"></span>
+  <input type="file" id="file" accept=".csv" style="display:none" />
+  <button class="btn" id="loadBtn">Load av_trace.csv</button>
+</header>
+
+<div id="wrap">
+  <div class="card" id="stage">
+    <canvas id="overview" height="54"></canvas>
+    <canvas id="scene" height="460"></canvas>
+    <div id="controls">
+      <button class="btn primary" id="play">&#9654; Play</button>
+      <button class="btn" id="stepB">&#9664;|</button>
+      <button class="btn" id="stepF">|&#9654;</button>
+      <input type="range" id="scrub" min="0" max="0" value="0" step="1" />
+      <span id="tLabel" style="font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)">0.0 s</span>
+      <label>speed
+        <select id="rate">
+          <option value="0.5">0.5&times;</option>
+          <option value="1" selected>1&times;</option>
+          <option value="2">2&times;</option>
+          <option value="4">4&times;</option>
+        </select>
+      </label>
+    </div>
+    <div class="legend">
+      <span class="lg-ego">ego (true)</span>
+      <span class="lg-ghost">ego (EKF estimate)</span>
+      <span class="lg-obs">obstacle</span>
+      <span class="lg-trail">driven path</span>
+    </div>
+    <div id="drop">
+      <p><strong>Drop <code>av_trace.csv</code> here</strong> — or click &ldquo;Load&rdquo; above.</p>
+      <p>Generate it by running the pipeline demo: <code>./build_demo/pipeline_demo</code> writes <code>av_trace.csv</code> next to where you run it.</p>
+    </div>
+  </div>
+
+  <div class="card hud">
+    <h2>Telemetry</h2>
+    <div class="row"><span class="k">time</span><span id="hT">&ndash;</span></div>
+    <div class="row"><span class="k">speed</span><span id="hV">&ndash;</span></div>
+    <div class="row"><span class="k">true x</span><span id="hX">&ndash;</span></div>
+    <div class="row"><span class="k">EKF x</span><span id="hEx">&ndash;</span></div>
+    <div class="row"><span class="k">est. error</span><span id="hErr">&ndash;</span></div>
+    <div class="row"><span class="k">obj dist</span><span id="hD">&ndash;</span></div>
+    <div class="row"><span class="k"># objects</span><span id="hN">&ndash;</span></div>
+
+    <h2 style="margin-top:16px">Actuation</h2>
+    <div class="row"><span class="k">throttle</span><span id="hThr">0%</span></div>
+    <div class="bar"><div class="fill-teal" id="barThr"></div></div>
+    <div class="row"><span class="k">brake</span><span id="hBrk">0%</span></div>
+    <div class="bar"><div class="fill-red" id="barBrk"></div></div>
+    <div class="row"><span class="k">steer</span><span id="hSteer">0&deg;</span></div>
+    <div class="bar"><div class="fill-amber" id="barSteer" style="margin-left:50%"></div></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const scene = document.getElementById('scene');
+const sctx = scene.getContext('2d');
+const ov = document.getElementById('overview');
+const octx = ov.getContext('2d');
+
+let frames = [];          // parsed rows
+let scenario = { laneX0:0, laneY0:0, laneX1:200, laneY1:0, obsX:100, obsY:0, obsSx:2, obsSy:2 };
+let idx = 0;
+let playing = false;
+let rate = 1;
+let lastTs = 0;
+let simTime = 0;          // seconds, drives playback
+const CAR_L = 4.7, CAR_W = 2.0;   // ego footprint (m)
+const VIEW_W_M = 60;              // metres visible horizontally in follow cam
+
+// ---------- CSV parsing ----------
+function parseCSV(text){
+  const rows = [];
+  const lines = text.split(/\r?\n/);
+  let cols = null;
+  for (const raw of lines){
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('#')){
+      const p = line.slice(1).split(',').map(s=>s.trim());
+      if (p[0]==='lane'){ scenario.laneX0=+p[1]; scenario.laneY0=+p[2]; scenario.laneX1=+p[3]; scenario.laneY1=+p[4]; }
+      else if (p[0]==='obstacle'){ scenario.obsX=+p[1]; scenario.obsY=+p[2]; scenario.obsSx=+(p[3]||2); scenario.obsSy=+(p[4]||2); }
+      continue;
+    }
+    if (!cols){ cols = line.split(','); continue; }
+    const v = line.split(',');
+    const o = {};
+    cols.forEach((c,i)=>{ o[c] = v[i]==='' || v[i]===undefined ? null : +v[i]; });
+    rows.push(o);
+  }
+  return rows;
+}
+
+function loadText(text, name){
+  const parsed = parseCSV(text);
+  if (!parsed.length){ alert('No data rows found in file.'); return; }
+  frames = parsed;
+  idx = 0; simTime = frames[0].t || 0; playing = false;
+  document.getElementById('drop').classList.add('hide');
+  document.getElementById('fileName').textContent = name + ' — ' + frames.length + ' frames';
+  const scrub = document.getElementById('scrub');
+  scrub.max = frames.length - 1; scrub.value = 0;
+  setPlay(false);
+  resize();
+  render();
+}
+
+// ---------- rendering ----------
+function worldToScreen(wx, wy, cam, scale, W, H){
+  return [ W/2 + (wx-cam.x)*scale, H/2 - (wy-cam.y)*scale ];
+}
+function carPolygon(cx, cy, yaw, L, W){
+  const hl=L/2, hw=W/2, c=Math.cos(yaw), s=Math.sin(yaw);
+  const pts=[[hl,hw],[hl,-hw],[-hl,-hw],[-hl,hw]];
+  return pts.map(([px,py])=>[cx+px*c-py*s, cy+px*s+py*c]);
+}
+function fillPoly(ctx, poly, scale, cam, W, H, style, stroke){
+  ctx.beginPath();
+  poly.forEach((p,i)=>{ const [sx,sy]=worldToScreen(p[0],p[1],cam,scale,W,H); i?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy); });
+  ctx.closePath();
+  if (style){ ctx.fillStyle=style; ctx.fill(); }
+  if (stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=1.5; ctx.stroke(); }
+}
+
+function render(){
+  if (!frames.length) return;
+  const f = frames[idx];
+  const W = scene.width, H = scene.height;
+  const scale = W / VIEW_W_M;
+  const cam = { x: f.true_x, y: f.true_y };
+
+  // background / road
+  sctx.fillStyle = getVar('--bg'); sctx.fillRect(0,0,W,H);
+  const laneHalf = 1.75;
+  const [ , ry0] = worldToScreen(0, laneHalf, cam, scale, W, H);
+  const [ , ry1] = worldToScreen(0, -laneHalf, cam, scale, W, H);
+  sctx.fillStyle = getVar('--road'); sctx.fillRect(0, ry0, W, ry1-ry0);
+  // lane boundaries
+  sctx.strokeStyle = getVar('--lane'); sctx.globalAlpha=.5; sctx.lineWidth=2;
+  [laneHalf,-laneHalf].forEach(off=>{
+    sctx.beginPath();
+    const [ax,ay]=worldToScreen(scenario.laneX0,off,cam,scale,W,H);
+    const [bx,by]=worldToScreen(scenario.laneX1,off,cam,scale,W,H);
+    sctx.moveTo(ax,ay); sctx.lineTo(bx,by); sctx.stroke();
+  });
+  // dashed centre line
+  sctx.setLineDash([12,12]); sctx.beginPath();
+  const [cax,cay]=worldToScreen(scenario.laneX0,0,cam,scale,W,H);
+  const [cbx,cby]=worldToScreen(scenario.laneX1,0,cam,scale,W,H);
+  sctx.moveTo(cax,cay); sctx.lineTo(cbx,cby); sctx.stroke();
+  sctx.setLineDash([]); sctx.globalAlpha=1;
+
+  // distance markers every 10 m
+  sctx.fillStyle = getVar('--muted'); sctx.font='10px monospace';
+  const startM = Math.floor((cam.x-VIEW_W_M/2)/10)*10;
+  for (let m=startM; m<=cam.x+VIEW_W_M/2; m+=10){
+    const [mx,my]=worldToScreen(m,-laneHalf,cam,scale,W,H);
+    sctx.fillRect(mx,my,1,6); sctx.fillText(m+'m', mx+2, my+14);
+  }
+
+  // driven trail
+  sctx.strokeStyle = '#33ff66'; sctx.globalAlpha=.7; sctx.lineWidth=2; sctx.beginPath();
+  for (let i=0;i<=idx;i++){ const [tx,ty]=worldToScreen(frames[i].true_x,frames[i].true_y,cam,scale,W,H); i?sctx.lineTo(tx,ty):sctx.moveTo(tx,ty); }
+  sctx.stroke(); sctx.globalAlpha=1;
+
+  // obstacle
+  const obsPoly = carPolygon(scenario.obsX, scenario.obsY, 0, scenario.obsSx, scenario.obsSy);
+  fillPoly(sctx, obsPoly, scale, cam, W, H, 'rgba(248,113,113,.35)', getVar('--red'));
+
+  // detected object marker (if perception saw one this frame)
+  if (f.n_obj>0 && f.obj_x!=null){
+    const [ox,oy]=worldToScreen(f.obj_x,f.obj_y,cam,scale,W,H);
+    sctx.strokeStyle=getVar('--red'); sctx.lineWidth=1; sctx.beginPath();
+    sctx.arc(ox,oy,14,0,Math.PI*2); sctx.stroke();
+  }
+
+  // EKF estimate ghost
+  if (f.est_x!=null){
+    const gp = carPolygon(f.est_x, f.est_y, f.est_yaw||0, CAR_L, CAR_W);
+    fillPoly(sctx, gp, scale, cam, W, H, null, getVar('--ghost'));
+  }
+
+  // ego (true)
+  const ep = carPolygon(f.true_x, f.true_y, f.true_yaw||0, CAR_L, CAR_W);
+  fillPoly(sctx, ep, scale, cam, W, H, 'rgba(45,212,191,.55)', getVar('--teal'));
+  // heading tick
+  const [hx,hy]=worldToScreen(f.true_x+Math.cos(f.true_yaw||0)*CAR_L*0.55, f.true_y+Math.sin(f.true_yaw||0)*CAR_L*0.55, cam, scale, W, H);
+  const [ex,ey]=worldToScreen(f.true_x, f.true_y, cam, scale, W, H);
+  sctx.strokeStyle='#fff'; sctx.lineWidth=2; sctx.beginPath(); sctx.moveTo(ex,ey); sctx.lineTo(hx,hy); sctx.stroke();
+
+  drawOverview(f);
+  updateHUD(f);
+  document.getElementById('scrub').value = idx;
+  document.getElementById('tLabel').textContent = (f.t).toFixed(1) + ' s';
+}
+
+function drawOverview(f){
+  const W = ov.width, H = ov.height;
+  octx.fillStyle = getVar('--panel'); octx.fillRect(0,0,W,H);
+  const x0 = scenario.laneX0, x1 = scenario.laneX1, pad=16;
+  const sx = m => pad + (m-x0)/(x1-x0)*(W-2*pad);
+  const midY = H/2;
+  octx.strokeStyle = getVar('--line'); octx.lineWidth=3; octx.beginPath();
+  octx.moveTo(sx(x0),midY); octx.lineTo(sx(x1),midY); octx.stroke();
+  // obstacle
+  octx.fillStyle = getVar('--red'); octx.fillRect(sx(scenario.obsX)-3, midY-7, 6, 14);
+  // driven progress
+  octx.strokeStyle = '#33ff66'; octx.lineWidth=3; octx.beginPath();
+  octx.moveTo(sx(x0),midY); octx.lineTo(sx(f.true_x),midY); octx.stroke();
+  // ego marker
+  octx.fillStyle = getVar('--teal'); octx.beginPath();
+  octx.arc(sx(f.true_x), midY, 6, 0, Math.PI*2); octx.fill();
+  octx.fillStyle = getVar('--muted'); octx.font='10px monospace';
+  octx.fillText('0 m', sx(x0)-6, midY-10); octx.fillText(x1+' m', sx(x1)-14, midY-10);
+}
+
+function updateHUD(f){
+  const g=id=>document.getElementById(id);
+  g('hT').textContent = f.t.toFixed(1)+' s';
+  g('hV').textContent = (f.v!=null?f.v.toFixed(2):'-')+' m/s';
+  g('hX').textContent = f.true_x.toFixed(2)+' m';
+  g('hEx').textContent = (f.est_x!=null?f.est_x.toFixed(2):'-')+' m';
+  g('hErr').textContent = (f.est_x!=null?(Math.hypot(f.est_x-f.true_x, (f.est_y||0)-(f.true_y||0))).toFixed(2):'-')+' m';
+  const d = (f.n_obj>0 && f.obj_x!=null) ? Math.hypot(f.obj_x-f.true_x, (f.obj_y||0)-f.true_y) : null;
+  g('hD').textContent = d!=null ? d.toFixed(1)+' m' : '—';
+  g('hN').textContent = f.n_obj!=null ? f.n_obj : '-';
+  const thr=(f.throttle||0), brk=(f.brake||0), st=(f.steer||0);
+  g('hThr').textContent = Math.round(thr*100)+'%'; g('barThr').style.width=(thr*100)+'%';
+  g('hBrk').textContent = Math.round(brk*100)+'%'; g('barBrk').style.width=(brk*100)+'%';
+  const deg = st*180/Math.PI;
+  g('hSteer').textContent = deg.toFixed(1)+'°';
+  const w = Math.min(50, Math.abs(deg)/30*50);
+  const bs=g('barSteer'); bs.style.width=w+'%';
+  bs.style.marginLeft = st>=0 ? '50%' : (50-w)+'%';
+}
+
+function getVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+// ---------- playback ----------
+function setPlay(on){
+  playing=on;
+  document.getElementById('play').innerHTML = on ? '&#10073;&#10073; Pause' : '&#9654; Play';
+  if (on){ lastTs=performance.now(); requestAnimationFrame(tick); }
+}
+function tick(ts){
+  if (!playing) return;
+  const dtReal = (ts-lastTs)/1000; lastTs=ts;
+  simTime += dtReal*rate;
+  // advance idx to the frame whose t <= simTime
+  while (idx < frames.length-1 && frames[idx+1].t <= simTime) idx++;
+  if (idx >= frames.length-1){ idx=frames.length-1; render(); setPlay(false); return; }
+  render();
+  requestAnimationFrame(tick);
+}
+
+// ---------- sizing ----------
+function resize(){
+  const stage = document.getElementById('stage');
+  const w = stage.clientWidth;
+  scene.width = w; scene.height = 460;
+  ov.width = w; ov.height = 54;
+  if (frames.length) render();
+}
+window.addEventListener('resize', resize);
+
+// ---------- events ----------
+document.getElementById('play').onclick = ()=>{ if(!frames.length) return; if(idx>=frames.length-1){ idx=0; simTime=frames[0].t; } setPlay(!playing); };
+document.getElementById('stepF').onclick = ()=>{ if(idx<frames.length-1){ idx++; simTime=frames[idx].t; render(); } };
+document.getElementById('stepB').onclick = ()=>{ if(idx>0){ idx--; simTime=frames[idx].t; render(); } };
+document.getElementById('scrub').oninput = e=>{ idx=+e.target.value; simTime=frames[idx].t; render(); };
+document.getElementById('rate').onchange = e=>{ rate=+e.target.value; };
+document.getElementById('loadBtn').onclick = ()=>document.getElementById('file').click();
+document.getElementById('file').onchange = e=>{ const f=e.target.files[0]; if(f){ f.text().then(t=>loadText(t,f.name)); } };
+
+const stageEl = document.getElementById('stage');
+['dragover','dragenter'].forEach(ev=>stageEl.addEventListener(ev, e=>{ e.preventDefault(); }));
+stageEl.addEventListener('drop', e=>{ e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) f.text().then(t=>loadText(t,f.name)); });
+
+// try to auto-load a sibling av_trace.csv (works when served over http://)
+resize();
+fetch('av_trace.csv').then(r=>{ if(r.ok) return r.text(); throw 0; })
+  .then(t=>loadText(t,'av_trace.csv')).catch(()=>{});
+</script>
+</body>
+</html>

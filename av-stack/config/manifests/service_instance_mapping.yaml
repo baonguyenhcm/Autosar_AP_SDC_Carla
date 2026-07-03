@@ -1,0 +1,41 @@
+# av-stack ara::com service-instance → binding / topic mapping.
+# lwrcl-style runtime mapping consumed alongside the ARXML manifests.
+#
+# Internal services use the SOME/IP binding (vsomeip) — chosen at runtime with
+# ARA_COM_EVENT_BINDING=vsomeip. The CARLA boundary is DDS, realized by the lwrcl
+# gateway's rclcpp topics (below), not by an ara::com service instance.
+
+default_binding: vsomeip          # ARA_COM_EVENT_BINDING for the internal AAs (SOME/IP)
+
+services:
+  - service: SensorService          # provided by the gateway
+    service_id: 1
+    binding: vsomeip
+    events: [imu, gps, speed, lidar]
+  - service: VehicleStateService    # provided by localization
+    service_id: 2
+    binding: vsomeip
+    events: [state]
+  - service: ObjectsService         # provided by perception
+    service_id: 3
+    binding: vsomeip
+    events: [objects]
+  - service: TrajectoryService      # provided by planning
+    service_id: 4
+    binding: vsomeip
+    events: [trajectory]
+  - service: ControlService         # provided by control
+    service_id: 5
+    binding: vsomeip
+    events: [command]
+
+# CARLA boundary handled by the lwrcl gateway (rclcpp ⇄ ara::com), DDS binding.
+gateway:
+  role_name: ego_vehicle
+  binding: dds                      # ARA_COM_EVENT_BINDING=dds for the CARLA side
+  subscribe:                        # ROS 2 topics → SensorService events
+    /carla/ego_vehicle/imu:       { type: sensor_msgs/msg/Imu,          to: SensorService.imu }
+    /carla/ego_vehicle/odometry:  { type: nav_msgs/msg/Odometry,        to: [SensorService.gps, SensorService.speed] }
+    /carla/ego_vehicle/lidar:     { type: sensor_msgs/msg/PointCloud2,  to: SensorService.lidar }
+  publish:                          # ControlService event → ROS 2 topic
+    ControlService.command:       { type: carla_msgs/msg/CarlaEgoVehicleControl, to: /carla/ego_vehicle/vehicle_control_cmd }

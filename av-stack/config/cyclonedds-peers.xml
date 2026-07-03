@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ALTERNATIVE TOPOLOGY ONLY: pure DDS over the LAN (NO Zenoh bridge).
+     Use this file *instead of* cyclonedds-local.xml only if you drop the Zenoh stack and
+     let CycloneDDS discovery cross the LAN directly between a carla-ros-bridge on WSL2 and
+     the Jetson gateway. For the default Zenoh topology (autoware_carla_launch), the Jetson
+     DDS is loopback-only — use cyclonedds-local.xml and leave this file unused.
+
+     CycloneDDS config for the Jetson ⇄ Windows/WSL2 CARLA link (ADR-05).
+     This host runs WSL2 in MIRRORED networking mode (confirmed: default route is
+     `via 192.168.1.1 dev eth2` on the real LAN, not the 172.x NAT). In mirrored mode
+     the WSL bridge shares the Windows host's LAN IP, so DDS reaches the Jetson directly
+     and CARLA is reachable at 127.0.0.1 from WSL. Multicast usually works in mirrored
+     mode, but unicast <Peers> is kept for reliable cross-host discovery.
+     Set on BOTH sides:  export CYCLONEDDS_URI=file://.../cyclonedds-peers.xml
+     Replace the addresses below with your actual Jetson IP and this host's LAN IP
+     (find them with `ip addr show eth2` here and `ip addr` on the Jetson). -->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="0">
+    <General>
+      <Interfaces>
+        <NetworkInterface autodetermine="true" priority="default"/>
+      </Interfaces>
+      <AllowMulticast>spdp</AllowMulticast>        <!-- mirrored WSL2: SPDP multicast OK; unicast peers below still used -->
+    </General>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <Peers>
+        <Peer address="192.168.1.50"/>             <!-- Jetson Orin Nano  (LAN 192.168.1.0/24, gw .1) -->
+        <Peer address="192.168.1.10"/>             <!-- Windows / WSL2 mirrored host (this machine) -->
+      </Peers>
+    </Discovery>
+    <Internal>
+      <!-- Enable iceoryx shared-memory for the local IPC binding on the Jetson. -->
+      <SharedMemory><Enable>true</Enable></SharedMemory>
+    </Internal>
+  </Domain>
+</CycloneDDS>

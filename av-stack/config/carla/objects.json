@@ -1,0 +1,70 @@
+{
+  "_comment": "carla-ros-bridge object/sensor definition for the av-stack demo. Spawns an ego vehicle whose sensor ids map to the exact topics the carla_gateway subscribes: /carla/ego_vehicle/{lidar,imu,gnss,odometry}. Camera + speedometer included for completeness. The bridge auto-creates /carla/ego_vehicle/vehicle_control_cmd (CarlaEgoVehicleControl) for the ego vehicle. Pass with: ros2 launch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch.py objects_definition_file:=<path>/objects.json",
+  "objects": [
+    {
+      "type": "sensor.pseudo.actor_list",
+      "id": "actor_list"
+    },
+    {
+      "type": "vehicle.tesla.model3",
+      "id": "ego_vehicle",
+      "sensors": [
+        {
+          "type": "sensor.camera.rgb",
+          "id": "rgb_front",
+          "spawn_point": { "x": 2.0, "y": 0.0, "z": 1.5, "roll": 0.0, "pitch": 0.0, "yaw": 0.0 },
+          "image_size_x": 800,
+          "image_size_y": 600,
+          "fov": 90.0,
+          "sensor_tick": 0.1
+        },
+        {
+          "type": "sensor.lidar.ray_cast",
+          "id": "lidar",
+          "spawn_point": { "x": 0.0, "y": 0.0, "z": 2.0, "roll": 0.0, "pitch": 0.0, "yaw": 0.0 },
+          "range": 50.0,
+          "channels": 32,
+          "points_per_second": 320000,
+          "rotation_frequency": 20.0,
+          "upper_fov": 10.0,
+          "lower_fov": -30.0,
+          "noise_stddev": 0.0,
+          "sensor_tick": 0.1
+        },
+        {
+          "type": "sensor.other.imu",
+          "id": "imu",
+          "spawn_point": { "x": 0.0, "y": 0.0, "z": 0.0, "roll": 0.0, "pitch": 0.0, "yaw": 0.0 },
+          "noise_accel_stddev_x": 0.0,
+          "noise_accel_stddev_y": 0.0,
+          "noise_accel_stddev_z": 0.0,
+          "noise_gyro_stddev_x": 0.0,
+          "noise_gyro_stddev_y": 0.0,
+          "noise_gyro_stddev_z": 0.0,
+          "sensor_tick": 0.02
+        },
+        {
+          "type": "sensor.other.gnss",
+          "id": "gnss",
+          "spawn_point": { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "noise_alt_stddev": 0.0,
+          "noise_lat_stddev": 0.0,
+          "noise_lon_stddev": 0.0,
+          "sensor_tick": 0.5
+        },
+        {
+          "type": "sensor.pseudo.odom",
+          "id": "odometry"
+        },
+        {
+          "type": "sensor.pseudo.speedometer",
+          "id": "speedometer"
+        },
+        {
+          "type": "actor.pseudo.control",
+          "id": "control"
+        }
+      ]
+    }
+  ]
+}

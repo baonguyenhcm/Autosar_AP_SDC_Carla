@@ -1,0 +1,13 @@
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# standalone demo build
+build_demo/
+
+# editor / OS
+.vscode/
+*.o
+*.a
+*.so

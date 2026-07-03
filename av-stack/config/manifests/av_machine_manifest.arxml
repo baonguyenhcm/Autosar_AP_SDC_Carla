@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- av-stack MACHINE MANIFEST (AUTOSAR AP R24-11) — Jetson machine, vehicle modes
+     (Machine States) and the driving Function Group, coordinated by State Management. -->
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://autosar.org/schema/r4.0 autosar_00050.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>av</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>Machine</SHORT-NAME>
+          <ELEMENTS>
+            <MACHINE>
+              <SHORT-NAME>JetsonOrinNano</SHORT-NAME>
+            </MACHINE>
+
+            <!-- Machine States = vehicle modes (managed by State Management). -->
+            <MODE-DECLARATION-GROUP>
+              <SHORT-NAME>MachineState</SHORT-NAME>
+              <MODE-DECLARATIONS>
+                <MODE-DECLARATION><SHORT-NAME>Startup</SHORT-NAME></MODE-DECLARATION>
+                <MODE-DECLARATION><SHORT-NAME>Driving</SHORT-NAME></MODE-DECLARATION>
+                <MODE-DECLARATION><SHORT-NAME>Parking</SHORT-NAME></MODE-DECLARATION>
+                <MODE-DECLARATION><SHORT-NAME>IgnitionOff</SHORT-NAME></MODE-DECLARATION>
+              </MODE-DECLARATIONS>
+              <INITIAL-MODE-REF DEST="MODE-DECLARATION">/av/Machine/MachineState/Startup</INITIAL-MODE-REF>
+            </MODE-DECLARATION-GROUP>
+
+            <!-- Function Group for the driving software (started/stopped per mode). -->
+            <MODE-DECLARATION-GROUP>
+              <SHORT-NAME>DrivingFG</SHORT-NAME>
+              <MODE-DECLARATIONS>
+                <MODE-DECLARATION><SHORT-NAME>Off</SHORT-NAME></MODE-DECLARATION>
+                <MODE-DECLARATION><SHORT-NAME>Active</SHORT-NAME></MODE-DECLARATION>
+                <MODE-DECLARATION><SHORT-NAME>SafeStop</SHORT-NAME></MODE-DECLARATION>
+              </MODE-DECLARATIONS>
+              <INITIAL-MODE-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Off</INITIAL-MODE-REF>
+            </MODE-DECLARATION-GROUP>
+
+            <!-- Ethernet + SOME/IP service discovery for ara::com (vsomeip). -->
+            <COMMUNICATION-CLUSTER>
+              <ETHERNET-PHYSICAL-CHANNEL>
+                <SHORT-NAME>AvEthernet</SHORT-NAME>
+                <NETWORK-ENDPOINTS>
+                  <NETWORK-ENDPOINT>
+                    <SHORT-NAME>JetsonEP</SHORT-NAME>
+                    <NETWORK-ENDPOINT-ADDRESSES>
+                      <IPV-4-CONFIGURATION><IPV-4-ADDRESS>192.168.1.50</IPV-4-ADDRESS></IPV-4-CONFIGURATION>
+                    </NETWORK-ENDPOINT-ADDRESSES>
+                  </NETWORK-ENDPOINT>
+                </NETWORK-ENDPOINTS>
+              </ETHERNET-PHYSICAL-CHANNEL>
+            </COMMUNICATION-CLUSTER>
+            <SOMEIP-SERVICE-DISCOVERY>
+              <MULTICAST-IP-ADDRESS>224.224.224.245</MULTICAST-IP-ADDRESS>
+              <PORT>30490</PORT>
+              <PROTOCOL>UDP</PROTOCOL>
+            </SOMEIP-SERVICE-DISCOVERY>
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

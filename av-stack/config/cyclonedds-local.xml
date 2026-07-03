@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- LOCAL (loopback) CycloneDDS config for the Jetson in the ZENOH topology.
+     Both zenoh-bridge-ros2dds and the lwrcl carla_gateway run on THIS Jetson and
+     discover each other over CycloneDDS domain 0 on the loopback interface. The
+     machine-to-machine hop (Jetson <-> Windows/WSL2) is carried by Zenoh, NOT DDS,
+     so there are no LAN peers here.
+     This is the file run_ap.sh points CYCLONEDDS_URI at by default.
+     For the ALTERNATIVE pure-DDS-over-LAN topology (no Zenoh) use cyclonedds-peers.xml. -->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="0">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="lo" priority="default" multicast="true"/>
+      </Interfaces>
+      <AllowMulticast>true</AllowMulticast>          <!-- loopback SPDP discovery on the Jetson -->
+    </General>
+  </Domain>
+</CycloneDDS>

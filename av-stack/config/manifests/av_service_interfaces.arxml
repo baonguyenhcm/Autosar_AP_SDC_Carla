@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- av-stack service interface descriptions (AUTOSAR AP R24-11, illustrative).
+     Defines the SOA contract used by the Adaptive Applications over ara::com.
+     Element names follow the AP meta-model; payload types are compacted. -->
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00052.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>av</SHORT-NAME>
+      <AR-PACKAGES>
+
+        <!-- ================= Payload data types ================= -->
+        <AR-PACKAGE>
+          <SHORT-NAME>DataTypes</SHORT-NAME>
+          <ELEMENTS>
+            <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+              <SHORT-NAME>float64</SHORT-NAME>
+              <CATEGORY>VALUE</CATEGORY>
+            </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+
+            <IMPLEMENTATION-DATA-TYPE>
+              <SHORT-NAME>VehicleState</SHORT-NAME>
+              <CATEGORY>STRUCTURE</CATEGORY>
+              <SUB-ELEMENTS>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>stamp</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>x</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>y</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>yaw</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>v</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+              </SUB-ELEMENTS>
+            </IMPLEMENTATION-DATA-TYPE>
+
+            <IMPLEMENTATION-DATA-TYPE>
+              <SHORT-NAME>ControlCommand</SHORT-NAME>
+              <CATEGORY>STRUCTURE</CATEGORY>
+              <SUB-ELEMENTS>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>stamp</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>throttle</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>brake</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <IMPLEMENTATION-DATA-TYPE-ELEMENT><SHORT-NAME>steer</SHORT-NAME></IMPLEMENTATION-DATA-TYPE-ELEMENT>
+              </SUB-ELEMENTS>
+            </IMPLEMENTATION-DATA-TYPE>
+
+            <IMPLEMENTATION-DATA-TYPE>
+              <SHORT-NAME>DetectedObjectArray</SHORT-NAME>
+              <CATEGORY>VECTOR</CATEGORY>
+            </IMPLEMENTATION-DATA-TYPE>
+            <IMPLEMENTATION-DATA-TYPE>
+              <SHORT-NAME>Trajectory</SHORT-NAME>
+              <CATEGORY>VECTOR</CATEGORY>
+            </IMPLEMENTATION-DATA-TYPE>
+            <IMPLEMENTATION-DATA-TYPE><SHORT-NAME>ImuSample</SHORT-NAME><CATEGORY>STRUCTURE</CATEGORY></IMPLEMENTATION-DATA-TYPE>
+            <IMPLEMENTATION-DATA-TYPE><SHORT-NAME>GpsSample</SHORT-NAME><CATEGORY>STRUCTURE</CATEGORY></IMPLEMENTATION-DATA-TYPE>
+            <IMPLEMENTATION-DATA-TYPE><SHORT-NAME>SpeedSample</SHORT-NAME><CATEGORY>STRUCTURE</CATEGORY></IMPLEMENTATION-DATA-TYPE>
+            <IMPLEMENTATION-DATA-TYPE><SHORT-NAME>LidarSample</SHORT-NAME><CATEGORY>STRUCTURE</CATEGORY></IMPLEMENTATION-DATA-TYPE>
+          </ELEMENTS>
+        </AR-PACKAGE>
+
+        <!-- ================= Service interfaces ================= -->
+        <AR-PACKAGE>
+          <SHORT-NAME>ServiceInterfaces</SHORT-NAME>
+          <ELEMENTS>
+            <SERVICE-INTERFACE>
+              <SHORT-NAME>SensorService</SHORT-NAME>
+              <NAMESPACES><SYMBOL-PROPS><SHORT-NAME>av</SHORT-NAME><SYMBOL>av</SYMBOL></SYMBOL-PROPS></NAMESPACES>
+              <EVENTS>
+                <VARIABLE-DATA-PROTOTYPE><SHORT-NAME>imu</SHORT-NAME><TYPE-TREF DEST="IMPLEMENTATION-DATA-TYPE">/av/DataTypes/ImuSample</TYPE-TREF></VARIABLE-DATA-PROTOTYPE>
+                <VARIABLE-DATA-PROTOTYPE><SHORT-NAME>gps</SHORT-NAME><TYPE-TREF DEST="IMPLEMENTATION-DATA-TYPE">/av/DataTypes/GpsSample</TYPE-TREF></VARIABLE-DATA-PROTOTYPE>
+                <VARIABLE-DATA-PROTOTYPE><SHORT-NAME>speed</SHORT-NAME><TYPE-TREF DEST="IMPLEMENTATION-DATA-TYPE">/av/DataTypes/SpeedSample</TYPE-TREF></VARIABLE-DATA-PROTOTYPE>
+                <VARIABLE-DATA-PROTOTYPE><SHORT-NAME>lidar</SHORT-NAME><TYPE-TREF DEST="IMPLEMENTATION-DATA-TYPE">/av/DataTypes/LidarSample</TYPE-TREF></VARIABLE-DATA-PROTOTYPE>
+              </EVENTS>
+            </SERVICE-INTERFACE>
+
+            <SERVICE-INTERFACE>
+              <SHORT-NAME>VehicleStateService</SHORT-NAME>
+              <EVENTS>
+                <VARIABLE-DATA-PROTOTYPE><SHORT-NAME>state</SHORT-NAME><TYPE-TREF DEST="IMPLEMENTATION-DATA-TYPE">/av/DataTypes/VehicleState</TYPE-TREF></VARIABLE-DATA-PROTOTYPE>
+              </EVENTS>
+            </SERVICE-INTERFACE>
+
+            <SERVICE-INTERFACE>
+              <SHORT-NAME>ObjectsService</SHORT-NAME>
+              <EVENTS>
+                <VARIABLE-DATA-PROTOTYPE><SHORT-NAME>objects</SHORT-NAME><TYPE-TREF DEST="IMPLEMENTATION-DATA-TYPE">/av/DataTypes/DetectedObjectArray</TYPE-TREF></VARIABLE-DATA-PROTOTYPE>
+              </EVENTS>
+            </SERVICE-INTERFACE>
+
+            <SERVICE-INTERFACE>
+              <SHORT-NAME>TrajectoryService</SHORT-NAME>
+              <EVENTS>
+                <VARIABLE-DATA-PROTOTYPE><SHORT-NAME>trajectory</SHORT-NAME><TYPE-TREF DEST="IMPLEMENTATION-DATA-TYPE">/av/DataTypes/Trajectory</TYPE-TREF></VARIABLE-DATA-PROTOTYPE>
+              </EVENTS>
+            </SERVICE-INTERFACE>
+
+            <SERVICE-INTERFACE>
+              <SHORT-NAME>ControlService</SHORT-NAME>
+              <EVENTS>
+                <VARIABLE-DATA-PROTOTYPE><SHORT-NAME>command</SHORT-NAME><TYPE-TREF DEST="IMPLEMENTATION-DATA-TYPE">/av/DataTypes/ControlCommand</TYPE-TREF></VARIABLE-DATA-PROTOTYPE>
+              </EVENTS>
+            </SERVICE-INTERFACE>
+          </ELEMENTS>
+        </AR-PACKAGE>
+
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

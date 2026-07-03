@@ -1,0 +1,58 @@
+MIT License
+
+Copyright (C) 2026 Nguyen Nguyen (baonguyenpro@gmail.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+THIRD-PARTY COMPONENTS AND ACKNOWLEDGEMENTS
+================================================================================
+
+This repository is a reference / teaching scaffold for a self-driving-car demo
+on the AUTOSAR Adaptive Platform. It is not intended for deployment on a real
+vehicle. The MIT license above covers only the original code authored in this
+repository. The components below are the property of their respective authors
+and remain governed by their own licenses.
+
+1. Adaptive-AUTOSAR  (included as a git submodule)
+   Source:   https://github.com/tatsuyai713/Adaptive-AUTOSAR
+   Copyright (c) tatsuyai713 and contributors.
+   License:  MIT License.
+   Its code is not copied into this repository; the submodule references the
+   upstream commit. See that repository's LICENSE file, which governs its use.
+
+2. lwrcl - LightWeight Rclcpp Compatible Library  (included as a git submodule)
+   Source:   https://github.com/tatsuyai713/lwrcl
+   Copyright (c) tatsuyai713 and contributors.
+   License:  Apache License, Version 2.0.
+   Its code is not copied into this repository; the submodule references the
+   upstream commit. See that repository's LICENSE and NOTICE files, which
+   govern its use. Any modifications made under this project are noted at the
+   point of change, as required by the Apache 2.0 license.
+
+3. Udacity Self-Driving Car materials  (reference only)
+   Source:   https://github.com/udacity
+   Portions of the av_stack algorithm cores - perception, localization
+   (EKF), planning, and control - were developed with reference to Udacity's
+   open self-driving-car course repositories. Those original materials remain
+   the property of Udacity and its contributors and are governed by their own
+   respective licenses; consult each Udacity repository's LICENSE file. This
+   project claims no ownership over Udacity's original works and reproduces no
+   substantial portion of their code verbatim; they served as an educational
+   reference for the algorithmic approaches re-implemented here.

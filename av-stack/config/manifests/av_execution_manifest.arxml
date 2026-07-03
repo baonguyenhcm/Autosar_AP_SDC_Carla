@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- av-stack EXECUTION MANIFEST (AUTOSAR AP R24-11).
+     Each app's MODE-DEPENDENT-STARTUP-CONFIG binds it to a machine mode (vehicle
+     mode) or a DrivingFG function-group state; State Management sets the modes and
+     Execution Management starts/stops the processes (see av_machine_manifest.arxml).
+     Mapping:  carla_gateway, localization = machineMode Driving;
+     perception, planning, control = functionGroup DrivingFG.Active;
+     safe_stop = functionGroup DrivingFG.SafeStop. -->
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://autosar.org/schema/r4.0 autosar_00050.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>av</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>Processes</SHORT-NAME>
+          <ELEMENTS>
+
+            <PROCESS>
+              <SHORT-NAME>carla_gateway</SHORT-NAME>
+              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/carla_gateway</EXECUTABLE-REF>
+              <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <MACHINE-MODE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/MachineState/Driving</MODE-DECLARATION-REF></MACHINE-MODE-IREF>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
+              </MODE-DEPENDENT-STARTUP-CONFIGS>
+            </PROCESS>
+
+            <PROCESS>
+              <SHORT-NAME>localization_app</SHORT-NAME>
+              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/localization_app</EXECUTABLE-REF>
+              <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <MACHINE-MODE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/MachineState/Driving</MODE-DECLARATION-REF></MACHINE-MODE-IREF>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
+              </MODE-DEPENDENT-STARTUP-CONFIGS>
+            </PROCESS>
+
+            <PROCESS>
+              <SHORT-NAME>perception_app</SHORT-NAME>
+              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/perception_app</EXECUTABLE-REF>
+              <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Active</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
+              </MODE-DEPENDENT-STARTUP-CONFIGS>
+            </PROCESS>
+
+            <PROCESS>
+              <SHORT-NAME>planning_app</SHORT-NAME>
+              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/planning_app</EXECUTABLE-REF>
+              <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Active</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
+              </MODE-DEPENDENT-STARTUP-CONFIGS>
+            </PROCESS>
+
+            <PROCESS>
+              <SHORT-NAME>control_app</SHORT-NAME>
+              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/control_app</EXECUTABLE-REF>
+              <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Active</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                  <STARTUP-CONFIG><SCHEDULING-POLICY>SCHED-FIFO</SCHEDULING-POLICY><SCHEDULING-PRIORITY>30</SCHEDULING-PRIORITY></STARTUP-CONFIG>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
+              </MODE-DEPENDENT-STARTUP-CONFIGS>
+            </PROCESS>
+
+            <PROCESS>
+              <SHORT-NAME>safe_stop_app</SHORT-NAME>
+              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/safe_stop_app</EXECUTABLE-REF>
+              <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/SafeStop</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                  <STARTUP-CONFIG><SCHEDULING-POLICY>SCHED-FIFO</SCHEDULING-POLICY><SCHEDULING-PRIORITY>40</SCHEDULING-PRIORITY></STARTUP-CONFIG>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
+              </MODE-DEPENDENT-STARTUP-CONFIGS>
+            </PROCESS>
+
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

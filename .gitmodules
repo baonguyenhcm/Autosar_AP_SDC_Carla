@@ -1,0 +1,6 @@
+[submodule "Adaptive-AUTOSAR"]
+	path = Adaptive-AUTOSAR
+	url = https://github.com/tatsuyai713/Adaptive-AUTOSAR.git
+[submodule "lwrcl"]
+	path = lwrcl
+	url = https://github.com/tatsuyai713/lwrcl.git

@@ -1,0 +1,42 @@
+# Shared parameters for the av-stack demo scenario.
+# Each node reads only the keys under its own name.
+
+simulator_node:
+  ros__parameters:
+    wheelbase: 2.7
+    max_accel: 2.0
+    max_decel: 4.0
+    obstacle_x: 100.0
+    obstacle_y: 0.0
+
+perception_node:
+  ros__parameters:
+    ground_z_max: -1.2
+    roi_range: 60.0
+    cell_size: 0.5
+    min_points: 5
+
+localization_node:
+  ros__parameters:
+    r_gps: 0.8
+    r_speed: 0.15
+    r_yaw: 0.05
+
+planning_node:
+  ros__parameters:
+    cruise_speed: 8.0
+    horizon_points: 40
+    stop_margin: 6.0
+    lane_half_width: 1.75
+    lane_length: 200.0
+    lane_spacing: 1.0
+
+control_node:
+  ros__parameters:
+    wheelbase: 2.7
+    lookahead_gain: 0.6
+    min_lookahead: 4.0
+    kp: 0.8
+    ki: 0.1
+    kd: 0.05
+    rate_hz: 50.0
