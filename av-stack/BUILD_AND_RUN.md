@@ -163,8 +163,14 @@ carries the LAN hop; DDS stays on loopback):
 
 ```bash
 nc -vz 192.168.100.2 7447  #expected successful
+cd ~/autoware_carla_launch
+./container/run-autoware-docker.sh
+##################INSIDE DOCKER##################
+export PATH="$HOME/autoware_carla_launch/external/zenoh-plugin-ros2dds/target/release:$PATH"
 export ROS_DOMAIN_ID=0
 zenoh-bridge-ros2dds -d 0 -e tcp/192.168.100.2:7447   # 192.168.100.2 = WSL2 host over the direct cable
+
+#another terminal: docker exec -it autoware-dev bash
 ros2 topic list | grep /carla/ego_vehicle    # imu / odometry / lidar should appear
 ros2 topic list                                       # confirm /carla/ego_vehicle/{imu,odometry,lidar} appear
 ```
