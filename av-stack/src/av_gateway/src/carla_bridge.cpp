@@ -10,8 +10,9 @@ namespace av {
 
 struct CarlaAraBridge::Impl {
   services::SensorServiceSkeleton sensors{"av"};
-  services::ControlServiceProxy   control{
-      services::ControlServiceProxy::FindService("av").front()};
+  // Constructed only after ControlService is offered (by control_app, which itself
+  // waits on services fed by our SensorService — so we must offer before we wait).
+  std::unique_ptr<services::ControlServiceProxy> control;
   ap::ExecutionClient exec;
   ap::Logger log{"gateway"};
   std::function<void(const ControlCommand&)> cb;
@@ -21,9 +22,12 @@ CarlaAraBridge::CarlaAraBridge() {
   ap::Initialize();
   impl_ = std::make_unique<Impl>();
   impl_->sensors.OfferService();
-  impl_->control.command.Subscribe(1);
-  impl_->control.command.SetReceiveHandler([this] {
-    impl_->control.command.GetNewSamples(
+  impl_->log.Info("carla_gateway (ara side): SensorService offered, waiting for ControlService");
+  impl_->control = std::make_unique<services::ControlServiceProxy>(
+      services::WaitForService<services::ControlServiceProxy>("av"));
+  impl_->control->command.Subscribe(1);
+  impl_->control->command.SetReceiveHandler([this] {
+    impl_->control->command.GetNewSamples(
         [this](ara::com::SamplePtr<services::ControlSample> c) {
           if (impl_->cb) impl_->cb(*c);
         });

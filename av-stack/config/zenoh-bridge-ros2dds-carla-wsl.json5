@@ -1,0 +1,31 @@
+// zenoh-bridge-ros2dds config — WSL2 side (the machine running CARLA + carla-ros-bridge).
+// Topology: carla-ros-bridge publishes /carla/ego_vehicle/* on local DDS; this bridge
+// routes them onto Zenoh and LISTENS on tcp/7447 for the Jetson to connect.
+//
+// Run (WSL2, same shell as carla-ros-bridge env, ROS_DOMAIN_ID=0):
+//   zenoh-bridge-ros2dds -c zenoh-bridge-ros2dds-carla-wsl.json5
+//
+// Direction semantics: "publishers" = local ROS publishers routed OUT to Zenoh
+// (sensor topics from carla-ros-bridge); "subscribers" = local ROS subscribers fed
+// FROM Zenoh (the control command that carla-ros-bridge consumes).
+{
+  mode: "peer",
+  listen: { endpoints: ["tcp/0.0.0.0:7447"] },
+  plugins: {
+    ros2dds: {
+      domain: 0,
+      ros_localhost_only: false,
+      allow: {
+        publishers:      ["/carla/ego_vehicle/imu",
+                          "/carla/ego_vehicle/odometry",
+                          "/carla/ego_vehicle/lidar",
+                          "/clock"],
+        subscribers:     ["/carla/ego_vehicle/vehicle_control_cmd"],
+        service_servers: ["/all_ignore"],
+        service_clients: ["/all_ignore"],
+        action_servers:  ["/all_ignore"],
+        action_clients:  ["/all_ignore"],
+      },
+    },
+  },
+}

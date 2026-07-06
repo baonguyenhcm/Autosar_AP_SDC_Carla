@@ -23,7 +23,11 @@ export VSOMEIP_CONFIGURATION="${VSOMEIP_CONFIGURATION:-${HERE}/config/vsomeip-av
 # --- gateway's rclcpp/CARLA side = CycloneDDS, domain 0, loopback (see cyclonedds-local.xml) ---
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
 export CYCLONEDDS_URI="file://${HERE}/config/cyclonedds-local.xml"
-export LD_LIBRARY_PATH="/opt/vsomeip/lib:/opt/autosar-ap/lib:/opt/autosar-ap-libs/lib:/opt/cyclonedds-libs/lib:/opt/cyclonedds/lib:${LD_LIBRARY_PATH:-}"
+# NOTE: /opt/cyclonedds-libs must come BEFORE /opt/autosar-ap-libs: both ship a
+# liblwrcl.so, and the gateway needs the CycloneDDS-backend one (the autosar-ap-libs
+# copy is a different lwrcl backend with an incompatible ABI — loading it segfaults
+# carla_gateway inside dds::pub::TPublisher).
+export LD_LIBRARY_PATH="/opt/vsomeip/lib:/opt/autosar-ap/lib:/opt/cyclonedds-libs/lib:/opt/cyclonedds/lib:/opt/autosar-ap-libs/lib:/opt/iceoryx/lib:${LD_LIBRARY_PATH:-}"
 
 # vsomeip routing manager (SOME/IP) for the local ara::com services.
 if [ -x /opt/autosar-ap/bin/autosar_vsomeip_routing_manager ]; then

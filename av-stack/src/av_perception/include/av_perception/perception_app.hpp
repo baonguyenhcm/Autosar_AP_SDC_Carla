@@ -12,8 +12,8 @@ class PerceptionApp {
  public:
   explicit PerceptionApp(const std::string& instance, const PerceptionParams& p = {})
       : core_(p),
-        sensors_(services::SensorServiceProxy::FindService(instance).front()),
-        state_(services::VehicleStateServiceProxy::FindService(instance).front()),
+        sensors_(services::WaitForService<services::SensorServiceProxy>(instance)),
+        state_(services::WaitForService<services::VehicleStateServiceProxy>(instance)),
         out_(instance), log_("perception") {
     out_.OfferService();
     state_.state.Subscribe(1); sensors_.lidar.Subscribe(1);

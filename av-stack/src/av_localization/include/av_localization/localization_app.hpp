@@ -12,7 +12,7 @@ class LocalizationApp {
  public:
   explicit LocalizationApp(const std::string& instance, const EkfParams& p = {})
       : ekf_(p),
-        sensors_(services::SensorServiceProxy::FindService(instance).front()),
+        sensors_(services::WaitForService<services::SensorServiceProxy>(instance)),
         out_(instance), log_("localization") {
     ekf_.initialize(0.0, 0.0, 0.0, 0.0, 0.0);
     out_.OfferService();

@@ -1,9 +1,9 @@
 {
     "_comment": "vsomeip config for the av-stack Adaptive Applications (ara::com SOME/IP backend). Selected with VSOMEIP_CONFIGURATION=.../vsomeip-av.json. Modeled on the reference Adaptive-AUTOSAR vsomeip-rpi.json.",
-    "unicast": "192.168.1.50",
+    "unicast": "192.168.100.1",
     "logging": { "level": "info", "console": "true", "file": { "enable": "false" }, "dlt": "false" },
     "applications": [
-        { "name": "av_routing_manager", "id": "0x1000" },
+        { "name": "autosar_vsomeip_routing_manager", "id": "0x1000" },
         { "name": "carla_gateway",      "id": "0x1101" },
         { "name": "localization_app",   "id": "0x1102" },
         { "name": "perception_app",     "id": "0x1103" },
@@ -11,7 +11,7 @@
         { "name": "control_app",         "id": "0x1105" },
         { "name": "safe_stop_app",       "id": "0x1107" }
     ],
-    "routing": "av_routing_manager",
+    "routing": "autosar_vsomeip_routing_manager",
     "services": [
         { "service": "0x1001", "instance": "0x0001", "unreliable": "30510" },
         { "service": "0x1002", "instance": "0x0001", "unreliable": "30511" },

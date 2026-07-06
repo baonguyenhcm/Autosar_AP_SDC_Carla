@@ -38,7 +38,10 @@ in for the SOME/IP binding); `control_app` represents the `DrivingFG=Active` sta
 
 Topology (two transports):
 ```
-CARLA 0.9.14 (Windows) <> WSL zenoh_carla_bridge ──Zenoh tcp/7447──▶ zenoh-bridge-ros2dds (Jetson)
+CARLA 0.9.14 (Windows) <> WSL carla-ros-bridge ──DDS (local)──▶ zenoh-bridge-ros2dds (WSL)
+                                                                        │ Zenoh tcp/7447
+                                                                        ▼
+                                                       zenoh-bridge-ros2dds (Jetson)
                                                    │  CycloneDDS, ROS_DOMAIN_ID=0, localhost
                                                    ▼
                                           lwrcl carla_gateway (CycloneDDS)
@@ -50,9 +53,12 @@ CARLA 0.9.14 (Windows) <> WSL zenoh_carla_bridge ──Zenoh tcp/7447──▶ z
 
 The cross-machine hop is **Zenoh only** (`tcp/7447`). On the Jetson everything is local:
 CycloneDDS loopback between `zenoh-bridge-ros2dds` and the gateway, vsomeip between the
-gateway and the four AAs. Two bridge processes, one per machine, each doing one
-translation: `zenoh_carla_bridge` (CARLA→Zenoh, WSL2) and `zenoh-bridge-ros2dds`
-(Zenoh→DDS, Jetson).
+gateway and the four AAs. The CARLA side runs the **official carla-ros-bridge** (which
+publishes the `/carla/ego_vehicle/*` topics and `CarlaEgoVehicleControl` type the gateway
+was written against) plus a WSL-side `zenoh-bridge-ros2dds` that routes exactly those
+topics over Zenoh. Do **NOT** use `zenoh_carla_bridge` from `autoware_carla_launch` here —
+it publishes Autoware-style topics/types (`v1/sensing/...`, Autoware control messages)
+that the gateway cannot consume.
 
 ### Network assumptions (this setup)
 
@@ -65,31 +71,35 @@ translation: `zenoh_carla_bridge` (CARLA→Zenoh, WSL2) and `zenoh-bridge-ros2dd
 1. Launch **CARLA 0.9.14**: `CarlaUE4.exe` (add `-quality-level=Low` to spare the Orin).
 2. CARLA listens on `0.0.0.0:2000`; from mirrored WSL2 it's reachable at `127.0.0.1`.
 
-### Part 2 — WSL2: Zenoh bridge (CARLA → Zenoh)
-Runs `zenoh_carla_bridge` from `autoware_carla_launch` (humble branch) **inside its Docker
-container** (ROS Humble + the bridge live in the image; WSL2 is only the Docker host).
+### Part 2 — WSL2: carla-ros-bridge + Zenoh bridge (CARLA → ROS 2 → Zenoh)
+Two processes on the WSL2 side: the official **carla-ros-bridge** turns CARLA into the
+`/carla/ego_vehicle/*` ROS 2 topics (spawning the ego + sensors from the av-stack's
+`objects.json`, whose sensor ids map 1:1 to the topics the gateway subscribes), and a
+WSL-side **zenoh-bridge-ros2dds** routes exactly those topics onto Zenoh, listening on
+`tcp/7447` for the Jetson. Copy `av-stack/config/carla/objects.json` and
+`av-stack/config/zenoh-bridge-ros2dds-carla-wsl.json5` to the WSL2 machine.
 
-Start the container, then run the bridge **inside** it:
 ```bash
-# WSL2 host: start/enter the bridge container
-cd ~/autoware_carla_launch
-./container/run-bridge-docker.sh
+# shell 1 — carla-ros-bridge (spawns ego 'ego_vehicle' + the av-stack sensors)
+source /opt/ros/humble/setup.bash
+source ~/carla-ros-bridge/install/setup.bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp     # match the rest of the pipeline
+ros2 launch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch.py \
+    host:=127.0.0.1 \
+    objects_definition_file:=$HOME/av-stack-config/objects.json
 
-# inside the container:
-cd ~/autoware_carla_launch
-source env.sh                              # sets CARLA_SIMULATOR_IP=127.0.0.1, VEHICLE_NAME=v1, ROS_DOMAIN_ID=0
-export CARLA_SIMULATOR_IP=127.0.0.1
-./script/bridge_ros2dds/run-bridge.sh      # starts zenoh_carla_bridge (listen tcp/0.0.0.0:7447) + carla_agent (spawns ego)
+# shell 2 — Zenoh bridge (listens tcp/0.0.0.0:7447; allow-list = the gateway's topics)
+export ROS_DOMAIN_ID=0
+zenoh-bridge-ros2dds -c $HOME/av-stack-config/zenoh-bridge-ros2dds-carla-wsl.json5
 ```
-`run-bridge.sh` runs two things in parallel: the `zenoh_carla_bridge` **and** the Python
-`carla_agent` that spawns the ego + sensors — so no separate ego-spawn step is needed.
 
-> **Namespace:** `env.sh` sets `VEHICLE_NAME=v1`, so the CARLA topics arrive over Zenoh
-> under the **`v1`** namespace and the ego rolename is `v1`. The gateway's `role_name`
-> param must match — set `role_name:=v1` (or change its default from `ego_vehicle`), or
-> override `VEHICLE_NAME` before launching. See Part 5.
+The ego role name is `ego_vehicle` (objects.json), which matches the gateway's
+`role_name` default — there is **no** namespace prefix on the Zenoh keys in this
+topology.
 
-Confirm the container logs a CARLA connection and is listening on `7447`.
+Confirm `/carla/ego_vehicle/{imu,odometry,lidar}` appear in `ros2 topic list` on WSL2 and
+the Zenoh bridge is listening on `7447`.
 
 **Container networking (must expose 7447 to the Jetson).** `run-bridge-docker.sh` has to
 either use `--network host` or publish the port (`-p 7447:7447`) so the LAN can reach the
@@ -163,21 +173,24 @@ carries the LAN hop; DDS stays on loopback):
 
 ```bash
 nc -vz 192.168.100.2 7447  #expected successful
-cd ~/autoware_carla_launch
-./container/run-autoware-docker.sh
-##################INSIDE DOCKER##################
 export PATH="$HOME/autoware_carla_launch/external/zenoh-plugin-ros2dds/target/release:$PATH"
 export ROS_DOMAIN_ID=0
-zenoh-bridge-ros2dds -d 0 -e tcp/192.168.100.2:7447   # 192.168.100.2 = WSL2 host over the direct cable
+# REQUIRED: puts the bridge's embedded CycloneDDS on loopback with unicast peer
+# discovery (Linux 'lo' has no multicast, so default discovery finds nothing there).
+export CYCLONEDDS_URI="file://$HOME/Autosar_AP_SDC_Carla/av-stack/config/cyclonedds-local.xml"
+zenoh-bridge-ros2dds \
+  -c ~/Autosar_AP_SDC_Carla/av-stack/config/zenoh-bridge-ros2dds-carla-jetson.json5 \
+  -e tcp/192.168.100.2:7447        # 192.168.100.2 = WSL2 host over the direct cable
 
-#another terminal: docker exec -it autoware-dev bash
-ros2 topic list | grep /carla/ego_vehicle    # imu / odometry / lidar should appear
-ros2 topic list                                       # confirm /carla/ego_vehicle/{imu,odometry,lidar} appear
+# verify (needs the same DDS env as the gateway):
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+ros2 topic list | grep /carla/ego_vehicle    # imu / odometry / lidar / vehicle_control_cmd
 ```
 - `192.168.100.2:7447` is the mirrored-WSL2 host on the direct Ethernet link (Part 3).
-- If topics don't appear or don't match, reconcile the bridge **namespace** (`-n`) with the
-  names `carla_gateway` subscribes (`/carla/ego_vehicle/...`); a stray `/v1` prefix is the
-  usual culprit.
+- **No `-n` namespace** in this topology — the WSL2 side publishes unprefixed
+  `/carla/...` keys. A stray `-n /v1` breaks every route.
+- The zenoh-bridge-ros2dds routes appear **on demand**: the sensor topics materialize
+  once `carla_gateway` (run_ap.sh, next step) subscribes to them.
 
 Then start the stack:
 
@@ -201,11 +214,13 @@ the Machine/Execution Manifests). `safe_stop_app` is **not** started here — it
 | Piece | Machine | Endpoint / config |
 |---|---|---|
 | CARLA 0.9.14 | Windows | listens `0.0.0.0:2000` |
-| `zenoh_carla_bridge` | WSL2 (Docker) | CARLA `127.0.0.1:2000` → Zenoh listen `tcp/0.0.0.0:7447` |
-| `zenoh-bridge-ros2dds` | Jetson | `-d 0 -e tcp/192.168.100.2:7447` → local CycloneDDS |
+| `carla-ros-bridge` | WSL2 | CARLA `127.0.0.1:2000` → `/carla/ego_vehicle/*` on local DDS (domain 0) |
+| `zenoh-bridge-ros2dds` | WSL2 | `zenoh-bridge-ros2dds-carla-wsl.json5` → Zenoh listen `tcp/0.0.0.0:7447` |
+| `zenoh-bridge-ros2dds` | Jetson | `zenoh-bridge-ros2dds-carla-jetson.json5` + `CYCLONEDDS_URI=cyclonedds-local.xml`, `-e tcp/192.168.100.2:7447` |
 | `carla_gateway` + 4 AAs | Jetson | `cyclonedds-local.xml` (loopback, domain 0) + vsomeip (`run_ap.sh`) |
 
-Start order: CARLA → `zenoh_carla_bridge` (WSL2) → `zenoh-bridge-ros2dds` (Jetson) → `run_ap.sh`.
+Start order: CARLA → `carla-ros-bridge` (WSL2) → `zenoh-bridge-ros2dds` (WSL2) →
+`zenoh-bridge-ros2dds` (Jetson) → `run_ap.sh`.
 
 ### Part 6 — Verify
 - Ego vehicle drives the lane in CARLA and **stops before the obstacle**, then resumes
@@ -224,9 +239,10 @@ Start order: CARLA → `zenoh_carla_bridge` (WSL2) → `zenoh-bridge-ros2dds` (J
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Jetson `nc -vz 192.168.100.2 7447` fails | container not exposing 7447, or firewall | `--network host`/`-p 7447:7447` in `run-bridge-docker.sh`; allow TCP 7447 (Defender + Hyper-V, Part 3) |
-| `zenoh_carla_bridge` can't reach CARLA | wrong CARLA host / CARLA down | mirrored WSL2 → host `127.0.0.1`; confirm CARLA is running on `:2000` |
-| Bridge connects but no topics on Jetson | Zenoh namespace mismatch | match `zenoh-bridge-ros2dds -n` to the gateway's `/carla/ego_vehicle/...` names |
+| Jetson `nc -vz 192.168.100.2 7447` fails | WSL bridge not listening, or firewall | start the WSL `zenoh-bridge-ros2dds` (listen `tcp/0.0.0.0:7447`); allow TCP 7447 (Defender + Hyper-V, Part 3) |
+| `carla-ros-bridge` can't reach CARLA | wrong CARLA host / CARLA down | mirrored WSL2 → host `127.0.0.1`; confirm CARLA is running on `:2000` |
+| Bridge connects but no topics on Jetson | namespace/allow-list mismatch, or nothing subscribed yet | no `-n` flag in this topology; use the `-carla-jetson.json5` config; routes appear once `carla_gateway` runs |
+| Gateway topics invisible to `ros2` CLI / bridge on Jetson | CycloneDDS on `lo` without the unicast-peer config (Linux `lo` has no multicast → discovery dead) | every local participant (bridge, CLI, gateway) needs `CYCLONEDDS_URI=file://.../cyclonedds-local.xml` + `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` |
 | Gateway ↔ CARLA silent, apps idle | gateway's rclcpp RMW/domain not matching the bridge | set `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`, `ROS_DOMAIN_ID`, `CYCLONEDDS_URI` (Part 4 note) |
 | Internal apps don't discover each other | no vsomeip routing manager | start it (run_ap.sh) / check `VSOMEIP_CONFIGURATION` |
 | Gateway can't (de)serialize control | `carla_msgs` IDL missing in lwrcl | add carla_msgs to `data_types` (Part 4.5) |

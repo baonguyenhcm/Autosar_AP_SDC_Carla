@@ -14,8 +14,8 @@ class PlanningApp {
   PlanningApp(const std::string& instance, const PlanningParams& p,
              const std::vector<Point3>& centerline)
       : core_(p),
-        state_(services::VehicleStateServiceProxy::FindService(instance).front()),
-        objects_(services::ObjectsServiceProxy::FindService(instance).front()),
+        state_(services::WaitForService<services::VehicleStateServiceProxy>(instance)),
+        objects_(services::WaitForService<services::ObjectsServiceProxy>(instance)),
         out_(instance), log_("planning") {
     core_.setGlobalPath(centerline);
     out_.OfferService();

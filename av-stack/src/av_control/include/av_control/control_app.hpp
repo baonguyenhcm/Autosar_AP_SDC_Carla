@@ -15,8 +15,8 @@ class ControlApp {
  public:
   explicit ControlApp(const std::string& instance, const ControlParams& p = {})
       : core_(p),
-        state_(services::VehicleStateServiceProxy::FindService(instance).front()),
-        traj_(services::TrajectoryServiceProxy::FindService(instance).front()),
+        state_(services::WaitForService<services::VehicleStateServiceProxy>(instance)),
+        traj_(services::WaitForService<services::TrajectoryServiceProxy>(instance)),
         out_(instance), log_("control"), se_(1) {
     out_.OfferService();
     state_.state.Subscribe(1); traj_.trajectory.Subscribe(1);

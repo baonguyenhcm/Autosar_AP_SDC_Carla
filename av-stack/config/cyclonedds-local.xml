@@ -14,5 +14,16 @@
       </Interfaces>
       <AllowMulticast>true</AllowMulticast>          <!-- loopback SPDP discovery on the Jetson -->
     </General>
+    <Discovery>
+      <!-- Linux 'lo' has no MULTICAST flag, so CycloneDDS disables multicast on it and
+           SPDP multicast discovery never happens on loopback. Discover peers by unicast
+           on 127.0.0.1 instead: every local participant using this config probes the
+           well-known ports for participant indexes 0..MaxAutoParticipantIndex. -->
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>32</MaxAutoParticipantIndex>
+      <Peers>
+        <Peer address="127.0.0.1"/>
+      </Peers>
+    </Discovery>
   </Domain>
 </CycloneDDS>

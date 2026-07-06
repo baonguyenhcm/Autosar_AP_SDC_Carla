@@ -1,0 +1,34 @@
+// zenoh-bridge-ros2dds config — Jetson side (the machine running the av-stack).
+// Topology: connects out to the WSL2 Zenoh listener and republishes the CARLA topics
+// onto the LOCAL loopback CycloneDDS domain 0 where carla_gateway lives.
+//
+// Run (Jetson) — CYCLONEDDS_URI is REQUIRED so the bridge's embedded CycloneDDS joins
+// the loopback interface with unicast peer discovery (lo has no multicast on Linux):
+//   export CYCLONEDDS_URI="file://$HOME/Autosar_AP_SDC_Carla/av-stack/config/cyclonedds-local.xml"
+//   zenoh-bridge-ros2dds -c zenoh-bridge-ros2dds-carla-jetson.json5 -e tcp/192.168.100.2:7447
+//
+// NO namespace (-n): the WSL2 side publishes unprefixed /carla/... keys.
+//
+// Direction semantics (mirror of the WSL2 config): "subscribers" = local ROS
+// subscribers fed FROM Zenoh (carla_gateway's sensor subscriptions); "publishers" =
+// local ROS publishers routed OUT to Zenoh (carla_gateway's control command).
+{
+  mode: "peer",
+  plugins: {
+    ros2dds: {
+      domain: 0,
+      ros_localhost_only: false,
+      allow: {
+        subscribers:     ["/carla/ego_vehicle/imu",
+                          "/carla/ego_vehicle/odometry",
+                          "/carla/ego_vehicle/lidar",
+                          "/clock"],
+        publishers:      ["/carla/ego_vehicle/vehicle_control_cmd"],
+        service_servers: ["/all_ignore"],
+        service_clients: ["/all_ignore"],
+        action_servers:  ["/all_ignore"],
+        action_clients:  ["/all_ignore"],
+      },
+    },
+  },
+}

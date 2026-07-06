@@ -16,10 +16,12 @@
 #ifndef AV_AP_AV_SERVICES_HPP
 #define AV_AP_AV_SERVICES_HPP
 
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "av_ap/ara_com.hpp"
@@ -286,5 +288,25 @@ AV_DEFINE_SERVICE(ControlService,      command,    ControlSample)
 }  // namespace services
 }  // namespace av
 #endif  // AP_HAVE_ARA
+
+namespace av {
+namespace services {
+
+// Blocks until FindService returns a handle, then returns the first one. The av-stack
+// apps are started in arbitrary order (run_ap.sh, or Execution Management later), so a
+// required service may not be offered yet; calling .front() on the empty container that
+// FindService returns in that window is UB (this segfaulted carla_gateway). On the host
+// shim FindService is never empty, so this returns immediately.
+template <class ProxyT>
+typename ProxyT::HandleType WaitForService(const std::string& instance) {
+  for (;;) {
+    auto handles = ProxyT::FindService(instance);
+    if (!handles.empty()) return handles.front();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+}
+
+}  // namespace services
+}  // namespace av
 
 #endif  // AV_AP_AV_SERVICES_HPP
