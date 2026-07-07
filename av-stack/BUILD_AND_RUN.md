@@ -81,10 +81,6 @@ WSL-side **zenoh-bridge-ros2dds** routes exactly those topics onto Zenoh, listen
 `tcp/7447` for the Jetson. Copy `av-stack/config/carla/objects.json` and
 `av-stack/config/zenoh-bridge-ros2dds-carla-wsl.json5` to the WSL2 machine.
 
-Note: copy files into docker 
-	cd /mnt/c/Claude_wsp/Wiki_Self-Driving-Car/git_repos/Autosar_AP_SDC_Carla/av-stack/config/carla
-    docker cp ./objects.json carla-dev:/home/nguyennqb/av-stack-config/
-
 ###Raise Kernel UDP buffer limit, execute it outside the docker###
 # raise kernel UDP buffer limits
 sudo sysctl -w net.core.rmem_max=16777216 net.core.rmem_default=16777216
@@ -93,6 +89,16 @@ sudo sysctl -w net.core.wmem_max=16777216 net.core.wmem_default=16777216
 # make it survive WSL restarts
 echo -e "net.core.rmem_max=16777216\nnet.core.rmem_default=16777216\nnet.core.wmem_max=16777216\nnet.core.wmem_default=16777216" | sudo tee /etc/sysctl.d/99-dds-buffers.conf
 
+docker start -ai carla-dev
+mkdir ~/av-stack-config
+exit
+###Copy files into docker so execute it outside the docker 
+	cd /mnt/c/Claude_wsp/Wiki_Self-Driving-Car/git_repos/Autosar_AP_SDC_Carla/av-stack/config/carla
+    docker cp ./objects.json carla-dev:/home/nguyennqb/av-stack-config/
+	cd /mnt/c/Claude_wsp/Wiki_Self-Driving-Car/git_repos/Autosar_AP_SDC_Carla/av-stack/config
+	docker cp ./zenoh-bridge-ros2dds-carla-wsl.json5 carla-dev:/home/nguyennqb/av-stack-config/
+
+docker start -ai carla-dev	
 ###INSTALL carla-ros-bridge inside docker carla-dev###
 # 0) prerequisites (once)
 source /opt/ros/humble/setup.bash
