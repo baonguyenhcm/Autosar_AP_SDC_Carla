@@ -171,6 +171,14 @@ local **`zenoh-bridge-ros2dds`** is running — the Zenoh↔DDS half that connec
 WSL Zenoh listener and republishes the CARLA topics onto local CycloneDDS domain 0 (Zenoh
 carries the LAN hop; DDS stays on loopback):
 
+###Raise Kernel UDP buffer limit, execute it outside the docker###
+# raise kernel UDP buffer limits
+sudo sysctl -w net.core.rmem_max=16777216 net.core.rmem_default=16777216
+sudo sysctl -w net.core.wmem_max=16777216 net.core.wmem_default=16777216
+
+# make it survive WSL restarts
+echo -e "net.core.rmem_max=16777216\nnet.core.rmem_default=16777216\nnet.core.wmem_max=16777216\nnet.core.wmem_default=16777216" | sudo tee /etc/sysctl.d/99-dds-buffers.conf
+
 ```bash
 nc -vz 192.168.100.2 7447  #expected successful
 export PATH="$HOME/autoware_carla_launch/external/zenoh-plugin-ros2dds/target/release:$PATH"
@@ -186,6 +194,11 @@ zenoh-bridge-ros2dds \
    pkill -f zenoh-bridge-ros2dds; pkill -f run_ap.sh; pkill -f autosar_vsomeip_routing_manager
    pkill -f '_app$'; pkill -f carla_gateway
 
+###Copy files into docker
+   cd ~/Autosar_AP_SDC_Carla/av-stack/config/
+   docker cp ./zenoh-bridge-ros2dds-carla-jetson.json5 autoware-dev:/home/nguyennqb/av-stack-config/
+   docker cp ./cyclonedds-local.xml               autoware-dev:/home/nguyennqb/av-stack-config/
+   
 ###Inside docker autoware-dev###
 export PATH="$HOME/autoware_carla_launch/external/zenoh-plugin-ros2dds/target/release:$PATH"
 export CYCLONEDDS_URI="file://$HOME/av-stack-config/cyclonedds-local.xml"
@@ -195,9 +208,14 @@ zenoh-bridge-ros2dds \
 
 # other terminal:
 cd ~/Autosar_AP_SDC_Carla/av-stack && ./run_ap.sh
+
 # verify (needs the same DDS env as the gateway):
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-ros2 topic list | grep /carla/ego_vehicle    # imu / odometry / lidar / vehicle_control_cmd
+export ROS_DOMAIN_ID=0
+export CYCLONEDDS_URI="file:///home/nguyennqb/av-stack-config/cyclonedds-local.xml"
+
+ros2 daemon stop        # kill the cached daemon that was started with the wrong RMW
+ros2 topic list
 ```
 - `192.168.100.2:7447` is the mirrored-WSL2 host on the direct Ethernet link (Part 3).
 - **No `-n` namespace** in this topology — the WSL2 side publishes unprefixed
