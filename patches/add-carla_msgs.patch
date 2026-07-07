@@ -31,7 +31,7 @@ new file mode 100644
 +++ b/src/carla_msgs/msg/CarlaEgoVehicleControl.idl
 @@ -0,0 +1,23 @@
 +// carla_msgs/msg/CarlaEgoVehicleControl.idl
-+// Mirrors carla_msgs/msg/CarlaEgoVehicleControl.msg (CARLA 0.9.14 ros-bridge).
++// Mirrors carla_msgs/msg/CarlaEgoVehicleControl.msg (CARLA 0.9.15 ros-bridge).
 +#ifndef __carla_msgs__msg__CarlaEgoVehicleControl__idl
 +#define __carla_msgs__msg__CarlaEgoVehicleControl__idl
 +

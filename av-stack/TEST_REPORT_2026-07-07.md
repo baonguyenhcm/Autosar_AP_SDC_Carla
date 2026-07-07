@@ -49,7 +49,7 @@ CARLA 0.9.15 (Windows) → carla-ros-bridge (WSL2) → Zenoh → Jetson Orin Nan
 | D4 | No DDS discovery on Jetson loopback (topics invisible to bridge/CLI) | Linux `lo` has no MULTICAST flag → CycloneDDS silently disables SPDP multicast | `cyclonedds-local.xml`: unicast peer discovery on `127.0.0.1` (`ParticipantIndex auto`, `MaxAutoParticipantIndex 32`) |
 | D5 | Zenoh bridge created routes but left them **inactive** (`local_nodes: []`) | **lwrcl does not publish `ros_discovery_info`**, so zenoh-bridge-ros2dds cannot attribute the gateway's DDS readers to a ROS node | Workaround: `route_keeper.py` (rclpy no-op subscriber) keeps routes active; DDS then also delivers to the gateway readers |
 | D6 | No CARLA data at all with original topology | `zenoh_carla_bridge` (autoware_carla_launch) publishes Autoware topics/types (`v1/sensing/...`), incompatible with the gateway's carla-ros-bridge topics/types | Topology changed to carla-ros-bridge + zenoh-bridge-ros2dds on WSL2; new allow-list configs `zenoh-bridge-ros2dds-carla-{wsl,jetson}.json5`; docs updated |
-| D7 | vsomeip config/docs assorted | `-n "v1"` namespace must be `/`-prefixed and is not needed in the new topology; CARLA client wheels: 0.9.14 has no cp310/aarch64 wheels | Docs updated (0.9.15 alignment); no `-n` in new topology |
+| D7 | vsomeip config/docs assorted | `-n "v1"` namespace must be `/`-prefixed and is not needed in the new topology; CARLA client wheels: 0.9.15 has no cp310/aarch64 wheels | Docs updated (0.9.15 alignment); no `-n` in new topology |
 
 ## Open issues (for next session)
 

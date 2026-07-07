@@ -56,11 +56,11 @@ The vehicle is simulated on the Windows host; the CARLA ⇄ ROS 2 bridge runs in
 
 | Dependency | Version / branch | Purpose | Link |
 |---|---|---|---|
-| **CARLA Simulator** | **0.9.14** | Native GPU driving simulator (UE4); serves the world and the ego vehicle. Binds its RPC server on `:2000`. | https://carla.org/ |
+| **CARLA Simulator** | **0.9.15** | Native GPU driving simulator (UE4); serves the world and the ego vehicle. Binds its RPC server on `:2000`. | https://carla.org/ |
 | **autoware_carla_launch** | **`humble` branch** | CARLA ⇄ ROS 2 bridge stack. Runs the Carla agent plus `zenoh_carla_bridge` + `zenoh-bridge-ros2dds`, exposing CARLA sensors/actuators as ROS 2 (DDS) topics that the av-stack gateway consumes. Runs in WSL2 / Ubuntu. | https://github.com/evshary/autoware_carla_launch/tree/humble |
 
 Notes:
-- CARLA 0.9.14 must match the bridge's expected CARLA API version.
+- CARLA 0.9.15 must match the bridge's expected CARLA API version.
 - The `humble` branch targets ROS 2 **Humble** and bridges over **Zenoh**
   (`zenoh_carla_bridge` on the CARLA side, `zenoh-bridge-ros2dds` on the ROS 2 side).
   On the Jetson, the av-stack `carla_gateway` subscribes the ROS 2 / DDS topics that
