@@ -201,13 +201,13 @@ so no DDS peers or UDP 7400–7500 rules are needed.
    `autosar-generate-proxy-skeleton` to PATH):
 
    > **REQUIRED PATCH (upstream bug, cannot be committed to the Adaptive-AUTOSAR clone):**
-   > apply `av-stack/patches/0001-adaptive-autosar-fix-vector-deserialize-use-after-move.patch`
+   > apply `Autosar_AP_SDC_Carla/patches/ap-fix-vector-deserialize.patch`
    > BEFORE building. Without it every non-trivial vector event payload (lidar, objects,
    > trajectory) throws `"Optional contains no value"` on deserialization — `control_app`
    > terminates and `perception_app` receives nothing (defect D8 in TEST_REPORT_2026-07-07.md).
    > ```bash
    > cd ~/Autosar_AP_SDC_Carla/Adaptive-AUTOSAR
-   > git apply ~/Autosar_AP_SDC_Carla/av-stack/patches/0001-adaptive-autosar-fix-vector-deserialize-use-after-move.patch
+   > git apply ~/Autosar_AP_SDC_Carla/patches/ap-fix-vector-deserialize.patch
    > ```
    > If the runtime was already installed unpatched, also sync the header:
    > `sudo cp src/ara/com/serialization.h /opt/autosar-ap/include/ara/com/serialization.h`
@@ -268,6 +268,8 @@ nc -vz 192.168.100.2 7447  #expected successful
    pkill -f zenoh-bridge-ros2dds; pkill -f run_ap.sh; pkill -f autosar_vsomeip_routing_manager
    pkill -f '_app$'; pkill -f carla_gateway
 
+git clone --recursive https://github.com/evshary/autoware_carla_launch.git
+#Modify "autoware_carla_launch\container\run-autoware-docker.sh" by removing '--nvidia'. In addition, adding '--nocleanup --name carla-dev'
 cd ~/autoware_carla_launch
 ./container/run-autoware-docker.sh
 
