@@ -35,11 +35,32 @@ if [ -x /opt/autosar-ap/bin/autosar_vsomeip_routing_manager ]; then
 fi
 
 # Manual bring-up: gateway first (offers SensorService), then the four AAs.
-"${BIN}/carla_gateway"    & G=$!;  sleep 0.5
-"${BIN}/localization_app" & L=$!;  sleep 0.2
-"${BIN}/perception_app"   & P=$!;  sleep 0.2
-"${BIN}/planning_app"     & N=$!;  sleep 0.2
-"${BIN}/control_app"      & C=$!
+# VSOMEIP_APPLICATION_NAME MUST be set per app to its configured name in vsomeip-av.json.
+# Without it every app registers under the generic "adaptive_autosar_client" name and
+# contends for dynamic client IDs during the startup storm; localization (whose IMU feed is
+# already live) then intermittently hits a registration timeout, vsomeip tears down mid-init,
+# and a receive-handler thread races the teardown -> SIGSEGV. With the configured name each
+# app gets its fixed id (0x1101-0x1105) and registration is deterministic.
+# localization_app has a nondeterministic vsomeip startup race (its IMU feed is already live,
+# so async registration can time out while a receive-handler already fires -> SIGSEGV). It is
+# CPU/scheduling sensitive and mostly bites under the concurrent-startup load on the Jetson.
+# supervise() restarts an app if it exits non-zero — the stand-in for Execution Management,
+# which restarts failed processes. Once localization wins the race it stays up.
+supervise() {
+  local name="$1"; local bin="$2"
+  ( while true; do
+      VSOMEIP_APPLICATION_NAME="$name" "$bin"; rc=$?
+      [ $rc -eq 0 ] && break                       # clean exit (SIGINT/SIGTERM) -> stop
+      echo "[run_ap] $name exited ($rc), restarting" >&2
+      sleep 0.5
+    done ) &
+}
 
-trap 'kill $G $L $P $N $C ${RM:-} 2>/dev/null || true' INT TERM
+supervise carla_gateway    "${BIN}/carla_gateway";    G=$!; sleep 0.5
+supervise localization_app "${BIN}/localization_app"; L=$!; sleep 0.2
+supervise perception_app   "${BIN}/perception_app";   P=$!; sleep 0.2
+supervise planning_app     "${BIN}/planning_app";     N=$!; sleep 0.2
+supervise control_app      "${BIN}/control_app";      C=$!
+
+trap 'kill $G $L $P $N $C ${RM:-} 2>/dev/null; pkill -x carla_gateway localization_app perception_app planning_app control_app 2>/dev/null || true' INT TERM
 wait

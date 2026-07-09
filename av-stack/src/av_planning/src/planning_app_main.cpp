@@ -4,6 +4,7 @@
 #include "av_planning/planning_app.hpp"
 
 int main() {
+  av::ap::Initialize();   // init the ara runtime before the app ctor subscribes (see localization main)
   std::vector<av::Point3> lane;
   for (double x = 0.0; x <= 200.0; x += 1.0) lane.push_back({x, 0.0, 0.0});
   av::PlanningApp app("av", av::PlanningParams{}, lane);

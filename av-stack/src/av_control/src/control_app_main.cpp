@@ -3,6 +3,7 @@
 #include "av_control/control_app.hpp"
 
 int main() {
+  av::ap::Initialize();   // init the ara runtime before the app ctor subscribes (see localization main)
   av::ControlApp app("av");
   const double dt = 0.02;
   return av::ap::run_app([&] { app.step(dt); }, std::chrono::milliseconds(20));

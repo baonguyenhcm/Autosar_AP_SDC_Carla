@@ -10,17 +10,26 @@
 namespace av {
 class LocalizationApp {
  public:
+  // INIT: register with the binding, find the SensorService, offer VehicleState — but do NOT
+  // subscribe yet. Subscribing here makes SOME/IP events (the already-live IMU feed) fire the
+  // receive handlers on binding threads DURING registration; that flood starves the vsomeip
+  // registration handshake -> timeout -> teardown races a handler -> SIGSEGV. Subscription is
+  // deferred to Start() (RUNNING state), per State Management: process events only when RUNNING.
   explicit LocalizationApp(const std::string& instance, const EkfParams& p = {})
       : ekf_(p),
         sensors_(services::WaitForService<services::SensorServiceProxy>(instance)),
         out_(instance), log_("localization") {
     ekf_.initialize(0.0, 0.0, 0.0, 0.0, 0.0);
     out_.OfferService();
+    log_.Info("VehicleStateService offered (INIT); awaiting RUNNING to subscribe SensorService");
+  }
+  // RUNNING: called once the process is up and registered — now safe to consume events.
+  void Start() {
     sensors_.imu.Subscribe(1); sensors_.gps.Subscribe(1); sensors_.speed.Subscribe(1);
     sensors_.imu.SetReceiveHandler([this] { onImu(); });
     sensors_.gps.SetReceiveHandler([this] { onGps(); });
     sensors_.speed.SetReceiveHandler([this] { onSpeed(); });
-    log_.Info("VehicleStateService offered; SensorService subscribed");
+    log_.Info("SensorService subscribed (RUNNING)");
   }
   const VehicleState& lastState() const { return last_; }
  private:
