@@ -8,15 +8,14 @@
 // Direction semantics: "publishers" = local ROS publishers routed OUT to Zenoh
 // (sensor topics from carla-ros-bridge); "subscribers" = local ROS subscribers fed
 // FROM Zenoh (the control command that carla-ros-bridge consumes).
+// CLOCK-SKEW NOTE: see the Jetson config. A WSL2/Jetson clock skew >500 ms produces a
+// cosmetic "exceeding delta 500ms" error flood on the RECEIVING (Jetson) side; data still
+// flows. The ros2dds plugin force-enables timestamping so it cannot be disabled here —
+// silence the Jetson bridge console with RUST_LOG (see Jetson config). Best long-term fix
+// is to keep both machines NTP-synced.
 {
   mode: "peer",
   listen: { endpoints: ["tcp/0.0.0.0:7447"] },
-  // Disable Zenoh's HLC timestamping so a WSL2/Jetson clock skew above Zenoh's 500 ms
-  // threshold does not reject sensor samples. Must match the Jetson-side config; the ROS
-  // header.stamp inside each message is untouched. See the Jetson config for details.
-  timestamping: {
-    enabled: false,
-  },
   plugins: {
     ros2dds: {
       domain: 0,

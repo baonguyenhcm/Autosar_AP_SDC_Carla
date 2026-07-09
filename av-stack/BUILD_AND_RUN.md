@@ -332,6 +332,11 @@ source /opt/ros/humble/setup.bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp ROS_DOMAIN_ID=0
 python3 ~/av-stack-config/route_keeper.py > /tmp/route_keeper.log 2>&1 &
 
+# RUST_LOG silences the cosmetic "exceeding delta 500ms" timestamp-error flood that appears
+# when the WSL2 clock is >500 ms off the Jetson. Data still flows (Zenoh replaces the
+# timestamp); the ros2dds plugin force-enables timestamping so it can't be turned off in the
+# config. Best long-term fix: keep both machines NTP-synced.
+export RUST_LOG="info,zenoh::net::routing::dispatcher::pubsub=off"
 zenoh-bridge-ros2dds \
   -c ~/av-stack-config/zenoh-bridge-ros2dds-carla-jetson.json5 \
   -e tcp/192.168.100.2:7447
