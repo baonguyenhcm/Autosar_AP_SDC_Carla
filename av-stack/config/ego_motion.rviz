@@ -1,0 +1,64 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Plane Cell Count: 60
+      Cell Size: 10
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+      Show Names: true
+      Marker Scale: 5
+    - Class: rviz_default_plugins/Odometry
+      Enabled: true
+      Name: EgoPath
+      Topic:
+        Value: /carla/ego_vehicle/odometry
+        Depth: 10
+        Reliability Policy: Best Effort
+      Keep: 300
+      Position Tolerance: 0.5
+      Angle Tolerance: 0.1
+      Shape:
+        Value: Arrow
+        Color: 240; 90; 60
+        Shaft Length: 1.5
+        Shaft Radius: 0.3
+        Head Length: 0.8
+        Head Radius: 0.5
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: CarlaLidar
+      Topic:
+        Value: /carla/ego_vehicle/lidar
+        Depth: 5
+        Reliability Policy: Best Effort
+      Style: Points
+      Size (Pixels): 3
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds:
+        Max Value: 6
+        Min Value: -3
+        Value: false
+      Decay Time: 0.5
+      Position Transformer: XYZ
+  Global Options:
+    Fixed Frame: map
+    Background Color: 22; 24; 29
+    Frame Rate: 30
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 120
+      Pitch: 0.9
+      Yaw: 0.78
+      Name: Current View

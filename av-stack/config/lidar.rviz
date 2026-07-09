@@ -1,0 +1,49 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Plane Cell Count: 20
+      Cell Size: 5
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: CarlaLidar
+      Topic:
+        Value: /carla/ego_vehicle/lidar
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+      Style: Points
+      Size (Pixels): 3
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds:
+        Max Value: 6
+        Min Value: -3
+        Value: false
+      Use Fixed Frame: true
+      Decay Time: 2
+      Position Transformer: XYZ
+  Global Options:
+    Fixed Frame: ego_vehicle/lidar
+    Background Color: 22; 24; 29
+    Frame Rate: 30
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 70
+      Pitch: 0.5
+      Yaw: 0.85
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Name: Current View

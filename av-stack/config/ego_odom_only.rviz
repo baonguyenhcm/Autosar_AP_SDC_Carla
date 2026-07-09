@@ -1,0 +1,44 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Plane Cell Count: 60
+      Cell Size: 10
+    - Class: rviz_default_plugins/Odometry
+      Enabled: true
+      Name: EgoPath
+      Topic:
+        Value: /carla/ego_vehicle/odometry
+        Depth: 10
+        Reliability Policy: Best Effort
+      Keep: 500
+      Position Tolerance: 0.5
+      Angle Tolerance: 0.1
+      Shape:
+        Value: Arrow
+        Color: 240; 90; 60
+        Shaft Length: 2
+        Shaft Radius: 0.4
+        Head Length: 1
+        Head Radius: 0.7
+  Global Options:
+    Fixed Frame: map
+    Background Color: 22; 24; 29
+    Frame Rate: 30
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Focal Point:
+        X: 87.8
+        Y: -330.4
+        Z: 0
+      Distance: 80
+      Pitch: 1.2
+      Yaw: 0.78
+      Name: Current View
