@@ -159,8 +159,10 @@ ros2 launch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch.py
 # confirm the flag took
 ros2 param get /carla_ros_bridge fixed_delta_seconds   # expect 0.1
 
-#Problem:
-#Solution:
+#Problem: 2026-07-09T02:24:00.669766Z ERROR                 rx-0 ThreadId(11) zenoh::net::routing::dispatcher::pubsub: Error treating timestamp for received Data (incoming timestamp from f719ed948ea9abb4260b027cee3beb66 exceeding delta 500ms is rejected: 2026-07-09T02:24:01.572200448Z vs. now: 2026-07-09T02:24:00.669759799Z). Replace timestamp: Some(7660348366004793408/5e6714f325f2abbb8751761528749f60)
+
+#Solution: At Jetson, don't execute: python3 ~/av-stack-config/route_keeper.py > /tmp/route_keeper.log 2>&1 &
+###At WSL2: 
 # 1. Verify the PTP device exists (WSL2 kernel 5.15+)
 ls /dev/ptp*
 
