@@ -358,16 +358,16 @@ docker exec -it autoware-dev bash
 ~/av-stack-config/record_ego_bag.sh          # Ctrl-C when done to finalize the bag
 
 # 4) Jetson — terminal C: the moment of truth
-cd ~/Autosar_AP_SDC_Carla/av-stack && ./run_ap.sh
+cd ~/Autosar_AP_SDC_Carla/av-stack && ./run_ap.sh 2>&1 | tee /tmp/retest.log
 
 
 # verify (needs the same DDS env as the gateway):
 docker exec -it autoware-dev bash
+source /opt/ros/humble/setup.bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export ROS_DOMAIN_ID=0
 export CYCLONEDDS_URI="file:///home/nguyennqb/av-stack-config/cyclonedds-local.xml"
 
-#ros2 daemon stop        # kill the cached daemon that was started with the wrong RMW
 ros2 topic list
 ```
 - `192.168.100.2:7447` is the mirrored-WSL2 host on the direct Ethernet link (Part 3).

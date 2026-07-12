@@ -26,6 +26,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 BIN="${HERE}/build_ap"
 
 APPS=(carla_gateway localization_app perception_app planning_app control_app)
+# Short name per app -> used for the per-process vsomeip application names below.
+SHORT=(gateway localization perception planning control)
 
 # --- ara::com internal binding = SOME/IP (vsomeip) ---
 export ARA_COM_EVENT_BINDING="${ARA_COM_EVENT_BINDING:-vsomeip}"
@@ -46,28 +48,34 @@ if [ -x /opt/autosar-ap/bin/autosar_vsomeip_routing_manager ]; then
   /opt/autosar-ap/bin/autosar_vsomeip_routing_manager & RM=$!; sleep 1
 fi
 
-# VSOMEIP_APPLICATION_NAME MUST be set per app to its configured name in vsomeip-av.json.
-# Without it every app registers under the generic "adaptive_autosar_client" name and
-# contends for dynamic client IDs during the startup storm; localization (whose IMU feed is
-# already live) then intermittently hits a registration timeout -> SIGSEGV. With the
-# configured name each app gets its fixed id (0x1101-0x1105) and registration is deterministic.
+# Per-process vsomeip application naming. The Adaptive-AUTOSAR runtime reads
+# ADAPTIVE_AUTOSAR_VSOMEIP_SERVER_APP / ADAPTIVE_AUTOSAR_VSOMEIP_CLIENT_APP (NOT
+# VSOMEIP_APPLICATION_NAME) to name its skeleton/proxy vsomeip applications. Setting them to
+# <short>_server / <short>_client gives each process the fixed client ids in vsomeip-av.json
+# (servers 0x110x, clients 0x111x), instead of every process sharing the generic
+# adaptive_autosar_{server,client} names -> dynamic-id collisions + ghost-client reconnect
+# loops across the init->run transition.
+vsomeip_env() {  # $1 = short app name; exports the two per-process app-name vars
+  export ADAPTIVE_AUTOSAR_VSOMEIP_SERVER_APP="${1}_server"
+  export ADAPTIVE_AUTOSAR_VSOMEIP_CLIENT_APP="${1}_client"
+}
 
 # ---- Phase 1: DrivingFG=Init — run the five self-terminating *_init Processes ----
 # Run one --phase=init Process per app, each retried up to 3x (the stand-in for EM's
 # numberOfRestartAttempts, covering localization's known vsomeip registration race).
 run_init() {
-  local name="$1" bin="$2" tries=0
+  local short="$1" bin="$2" tries=0
   while true; do
-    VSOMEIP_APPLICATION_NAME="$name" "$bin" --phase=init && return 0
+    ( vsomeip_env "$short"; exec "$bin" --phase=init ) && return 0
     tries=$((tries+1)); [ "$tries" -ge 3 ] && return 1
-    echo "[run_ap] $name --phase=init failed, retry $tries" >&2; sleep 0.5
+    echo "[run_ap] $short --phase=init failed, retry $tries" >&2; sleep 0.5
   done
 }
 
 echo "[run_ap] DrivingFG=Init: launching init wave (${APPS[*]})"
 declare -a IPIDS
-for name in "${APPS[@]}"; do
-  run_init "$name" "${BIN}/${name}" & IPIDS+=($!)
+for i in "${!APPS[@]}"; do
+  run_init "${SHORT[$i]}" "${BIN}/${APPS[$i]}" & IPIDS+=($!)
 done
 trap 'kill "${IPIDS[@]}" ${RM:-} 2>/dev/null || true; pkill -x "${APPS[@]}" 2>/dev/null || true' INT TERM
 
@@ -87,21 +95,21 @@ echo "[run_ap] all init Processes Terminated -> DrivingFG: Init -> Running"
 # supervise() restarts an app if it exits non-zero — the stand-in for Execution Management,
 # which restarts failed processes. Once localization wins the vsomeip race it stays up.
 supervise() {
-  local name="$1"; local bin="$2"
+  local short="$1"; local bin="$2"
   ( while true; do
-      VSOMEIP_APPLICATION_NAME="$name" "$bin" --phase=run; rc=$?
+      ( vsomeip_env "$short"; exec "$bin" --phase=run ); rc=$?
       [ $rc -eq 0 ] && break                       # clean exit (SIGINT/SIGTERM) -> stop
-      echo "[run_ap] $name exited ($rc), restarting" >&2
+      echo "[run_ap] $short exited ($rc), restarting" >&2
       sleep 0.5
     done ) &
 }
 
 # Gateway first (offers SensorService), then the four AAs.
-supervise carla_gateway    "${BIN}/carla_gateway";    G=$!; sleep 0.5
-supervise localization_app "${BIN}/localization_app"; L=$!; sleep 0.2
-supervise perception_app   "${BIN}/perception_app";   P=$!; sleep 0.2
-supervise planning_app     "${BIN}/planning_app";     N=$!; sleep 0.2
-supervise control_app      "${BIN}/control_app";      C=$!
+supervise gateway      "${BIN}/carla_gateway";    G=$!; sleep 0.5
+supervise localization "${BIN}/localization_app"; L=$!; sleep 0.2
+supervise perception   "${BIN}/perception_app";   P=$!; sleep 0.2
+supervise planning     "${BIN}/planning_app";     N=$!; sleep 0.2
+supervise control      "${BIN}/control_app";      C=$!
 
 trap 'kill $G $L $P $N $C ${RM:-} 2>/dev/null; pkill -x "${APPS[@]}" 2>/dev/null || true' INT TERM
 wait

@@ -1,6 +1,12 @@
 Panels:
   - Class: rviz_common/Displays
     Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+  - Class: rviz_common/Views
+    Name: Views
+  - Class: rviz_common/Tool Properties
+    Name: Tool Properties
 Visualization Manager:
   Class: ""
   Displays:
@@ -16,7 +22,7 @@ Visualization Manager:
         Value: /carla/ego_vehicle/odometry
         Depth: 10
         Reliability Policy: Best Effort
-      Keep: 500
+      Keep: 100
       Position Tolerance: 0.5
       Angle Tolerance: 0.1
       Shape:
@@ -30,10 +36,19 @@ Visualization Manager:
     Fixed Frame: map
     Background Color: 22; 24; 29
     Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
   Value: true
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
+      Name: Current View
       Focal Point:
         X: 87.8
         Y: -330.4
@@ -41,4 +56,9 @@ Visualization Manager:
       Distance: 80
       Pitch: 1.2
       Yaw: 0.78
-      Name: Current View
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Views:
+    collapsed: false

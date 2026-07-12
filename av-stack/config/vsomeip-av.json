@@ -1,15 +1,21 @@
 {
-    "_comment": "vsomeip config for the av-stack Adaptive Applications (ara::com SOME/IP backend). Selected with VSOMEIP_CONFIGURATION=.../vsomeip-av.json. Modeled on the reference Adaptive-AUTOSAR vsomeip-rpi.json.",
+    "_comment": "vsomeip config for the av-stack Adaptive Applications (ara::com SOME/IP backend). Selected with VSOMEIP_CONFIGURATION=.../vsomeip-av.json. NOTE: the Adaptive-AUTOSAR runtime creates ONE vsomeip application for its skeletons (server) and ONE for its proxies (client) PER PROCESS, named from ADAPTIVE_AUTOSAR_VSOMEIP_SERVER_APP / ADAPTIVE_AUTOSAR_VSOMEIP_CLIENT_APP (see vsomeip_application.cpp) — NOT from VSOMEIP_APPLICATION_NAME. run_ap.sh sets those per process to <app>_server / <app>_client so each vsomeip app gets a fixed client id below, instead of all sharing the generic adaptive_autosar_{server,client} names and contending for dynamic ids (which caused ID collisions + ghost-client reconnect loops across the init->run transition). Servers = 0x110x, clients = 0x111x.",
     "unicast": "192.168.100.1",
     "logging": { "level": "info", "console": "true", "file": { "enable": "false" }, "dlt": "false" },
     "applications": [
         { "name": "autosar_vsomeip_routing_manager", "id": "0x1000" },
-        { "name": "carla_gateway",      "id": "0x1101" },
-        { "name": "localization_app",   "id": "0x1102" },
-        { "name": "perception_app",     "id": "0x1103" },
-        { "name": "planning_app",        "id": "0x1104" },
-        { "name": "control_app",         "id": "0x1105" },
-        { "name": "safe_stop_app",       "id": "0x1107" }
+        { "name": "gateway_server",      "id": "0x1101" },
+        { "name": "gateway_client",      "id": "0x1111" },
+        { "name": "localization_server", "id": "0x1102" },
+        { "name": "localization_client", "id": "0x1112" },
+        { "name": "perception_server",   "id": "0x1103" },
+        { "name": "perception_client",   "id": "0x1113" },
+        { "name": "planning_server",     "id": "0x1104" },
+        { "name": "planning_client",     "id": "0x1114" },
+        { "name": "control_server",      "id": "0x1105" },
+        { "name": "control_client",      "id": "0x1115" },
+        { "name": "safe_stop_server",    "id": "0x1106" },
+        { "name": "safe_stop_client",    "id": "0x1116" }
     ],
     "routing": "autosar_vsomeip_routing_manager",
     "services": [
