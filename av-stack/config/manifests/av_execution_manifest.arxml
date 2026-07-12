@@ -1,20 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- av-stack EXECUTION MANIFEST (AUTOSAR AP R24-11).
-     Mode-gated two-phase startup. Each Adaptive Application is deployed as TWO Processes
-     that share one executable, told apart by StartupConfig.processArgument (phase=init /
-     phase=run). The barrier is enforced by the DrivingFG state machine, NOT by an
-     ExecutionDependency (which constr_1689 forbids across two Function Group States):
+     Mode-gated two-phase startup. Each Adaptive Application is deployed as ONE Process that
+     carries TWO state-dependent startup configs (one per DrivingFG state), told apart by
+     the startup ProcessArgument (phase=init / phase=run). Per TPS_ManifestSpecification
+     ch.8 (Table 8.1) a Process aggregates stateDependentStartupConfig with multiplicity *,
+     and constr_3396 requires the two configs to reference DIFFERENT functionGroupStates
+     (Init vs Running) — satisfied here.
 
-       DrivingFG.Init    -> the five *_init Processes run (ctor / one-time setup) and
-                            SELF-TERMINATE (PROCESS-IS-SELF-TERMINATING).
-       DrivingFG.Running -> the five *_app Processes run (app.Start() + control loop).
-                            State Management switches Init -> Running only AFTER every *_init
-                            Process has reached the Terminated ProcessState, so an *_app can
-                            only start once all inits are done AND the mode is Running.
+       DrivingFG.Init    -> the Process runs with phase=init (ctor / one-time register+offer)
+                            and SELF-TERMINATES (PROCESS-IS-SELF-TERMINATING).
+       DrivingFG.Running -> the Process runs with phase=run (app.Start() + control loop),
+                            PROCESS-IS-NOT-SELF-TERMINATING. State Management switches
+                            Init -> Running only AFTER every Process' init config has reached
+                            the Terminated ProcessState (barrier enforced by the DrivingFG
+                            state machine, NOT by an ExecutionDependency, which constr_1689
+                            forbids across two Function Group States).
        DrivingFG.SafeStop-> safe_stop_app runs.
 
+     Naming note: R24-11 (Table 8.3) names this meta-class StateDependentStartupConfig; the
+     tag below keeps the project's existing MODE-DEPENDENT-STARTUP-CONFIG spelling.
+     numberOfRestartAttempts (Table 8.1) models EM restarting a Process whose start fails —
+     set to 3 on localization_app for its known vsomeip registration race.
      Each Process keeps a ProcessState machine (Idle/Running/Terminated); SM watches the
-     inits' Terminated state to decide the Init -> Running transition.
+     init config's Terminated state to decide the Init -> Running transition.
      State Management sets DrivingFG; Execution Management starts/stops the Processes. -->
 <AUTOSAR xmlns="http://autosar.org/schema/r4.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -45,9 +53,12 @@
           <SHORT-NAME>Processes</SHORT-NAME>
           <ELEMENTS>
 
-            <!-- ============= INIT phase: run in DrivingFG.Init, self-terminate ============= -->
+            <!-- Each AA = ONE Process with TWO state-dependent startup configs:
+                 Init  (DrivingFG.Init)    : phase=init, PROCESS-IS-SELF-TERMINATING
+                 Run   (DrivingFG.Running) : phase=run,  PROCESS-IS-NOT-SELF-TERMINATING -->
+
             <PROCESS>
-              <SHORT-NAME>gateway_init</SHORT-NAME>
+              <SHORT-NAME>gateway</SHORT-NAME>
               <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/carla_gateway</EXECUTABLE-REF>
               <PROCESS-STATE-MACHINE>
                 <SHORT-NAME>ProcessState</SHORT-NAME>
@@ -61,103 +72,33 @@
                     <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
                   </STARTUP-CONFIG>
                 </MODE-DEPENDENT-STARTUP-CONFIG>
-              </MODE-DEPENDENT-STARTUP-CONFIGS>
-            </PROCESS>
-            <PROCESS>
-              <SHORT-NAME>localization_init</SHORT-NAME>
-              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/localization_app</EXECUTABLE-REF>
-              <PROCESS-STATE-MACHINE>
-                <SHORT-NAME>ProcessState</SHORT-NAME>
-                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
-              </PROCESS-STATE-MACHINE>
-              <MODE-DEPENDENT-STARTUP-CONFIGS>
                 <MODE-DEPENDENT-STARTUP-CONFIG>
-                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Init</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Running</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
                   <STARTUP-CONFIG>
-                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=init</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
-                    <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
-                  </STARTUP-CONFIG>
-                </MODE-DEPENDENT-STARTUP-CONFIG>
-              </MODE-DEPENDENT-STARTUP-CONFIGS>
-            </PROCESS>
-            <PROCESS>
-              <SHORT-NAME>perception_init</SHORT-NAME>
-              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/perception_app</EXECUTABLE-REF>
-              <PROCESS-STATE-MACHINE>
-                <SHORT-NAME>ProcessState</SHORT-NAME>
-                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
-              </PROCESS-STATE-MACHINE>
-              <MODE-DEPENDENT-STARTUP-CONFIGS>
-                <MODE-DEPENDENT-STARTUP-CONFIG>
-                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Init</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
-                  <STARTUP-CONFIG>
-                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=init</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
-                    <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
-                  </STARTUP-CONFIG>
-                </MODE-DEPENDENT-STARTUP-CONFIG>
-              </MODE-DEPENDENT-STARTUP-CONFIGS>
-            </PROCESS>
-            <PROCESS>
-              <SHORT-NAME>planning_init</SHORT-NAME>
-              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/planning_app</EXECUTABLE-REF>
-              <PROCESS-STATE-MACHINE>
-                <SHORT-NAME>ProcessState</SHORT-NAME>
-                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
-              </PROCESS-STATE-MACHINE>
-              <MODE-DEPENDENT-STARTUP-CONFIGS>
-                <MODE-DEPENDENT-STARTUP-CONFIG>
-                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Init</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
-                  <STARTUP-CONFIG>
-                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=init</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
-                    <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
-                  </STARTUP-CONFIG>
-                </MODE-DEPENDENT-STARTUP-CONFIG>
-              </MODE-DEPENDENT-STARTUP-CONFIGS>
-            </PROCESS>
-            <PROCESS>
-              <SHORT-NAME>control_init</SHORT-NAME>
-              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/control_app</EXECUTABLE-REF>
-              <PROCESS-STATE-MACHINE>
-                <SHORT-NAME>ProcessState</SHORT-NAME>
-                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
-              </PROCESS-STATE-MACHINE>
-              <MODE-DEPENDENT-STARTUP-CONFIGS>
-                <MODE-DEPENDENT-STARTUP-CONFIG>
-                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Init</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
-                  <STARTUP-CONFIG>
-                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=init</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
-                    <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
+                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=run</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
+                    <TERMINATION-BEHAVIOR>PROCESS-IS-NOT-SELF-TERMINATING</TERMINATION-BEHAVIOR>
                   </STARTUP-CONFIG>
                 </MODE-DEPENDENT-STARTUP-CONFIG>
               </MODE-DEPENDENT-STARTUP-CONFIGS>
             </PROCESS>
 
-            <!-- ============ RUN phase: run in DrivingFG.Running (after inits done) ============ -->
-            <PROCESS>
-              <SHORT-NAME>gateway_app</SHORT-NAME>
-              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/carla_gateway</EXECUTABLE-REF>
-              <PROCESS-STATE-MACHINE>
-                <SHORT-NAME>ProcessState</SHORT-NAME>
-                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
-              </PROCESS-STATE-MACHINE>
-              <MODE-DEPENDENT-STARTUP-CONFIGS>
-                <MODE-DEPENDENT-STARTUP-CONFIG>
-                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Running</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
-                  <STARTUP-CONFIG>
-                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=run</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
-                    <TERMINATION-BEHAVIOR>PROCESS-IS-NOT-SELF-TERMINATING</TERMINATION-BEHAVIOR>
-                  </STARTUP-CONFIG>
-                </MODE-DEPENDENT-STARTUP-CONFIG>
-              </MODE-DEPENDENT-STARTUP-CONFIGS>
-            </PROCESS>
             <PROCESS>
               <SHORT-NAME>localization_app</SHORT-NAME>
               <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/localization_app</EXECUTABLE-REF>
+              <!-- EM restarts this Process if a start fails (known vsomeip registration race). -->
+              <NUMBER-OF-RESTART-ATTEMPTS>3</NUMBER-OF-RESTART-ATTEMPTS>
               <PROCESS-STATE-MACHINE>
                 <SHORT-NAME>ProcessState</SHORT-NAME>
                 <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
               </PROCESS-STATE-MACHINE>
               <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Init</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                  <STARTUP-CONFIG>
+                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=init</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
+                    <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
+                  </STARTUP-CONFIG>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
                 <MODE-DEPENDENT-STARTUP-CONFIG>
                   <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Running</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
                   <STARTUP-CONFIG>
@@ -167,6 +108,7 @@
                 </MODE-DEPENDENT-STARTUP-CONFIG>
               </MODE-DEPENDENT-STARTUP-CONFIGS>
             </PROCESS>
+
             <PROCESS>
               <SHORT-NAME>perception_app</SHORT-NAME>
               <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/perception_app</EXECUTABLE-REF>
@@ -176,22 +118,12 @@
               </PROCESS-STATE-MACHINE>
               <MODE-DEPENDENT-STARTUP-CONFIGS>
                 <MODE-DEPENDENT-STARTUP-CONFIG>
-                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Running</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Init</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
                   <STARTUP-CONFIG>
-                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=run</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
-                    <TERMINATION-BEHAVIOR>PROCESS-IS-NOT-SELF-TERMINATING</TERMINATION-BEHAVIOR>
+                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=init</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
+                    <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
                   </STARTUP-CONFIG>
                 </MODE-DEPENDENT-STARTUP-CONFIG>
-              </MODE-DEPENDENT-STARTUP-CONFIGS>
-            </PROCESS>
-            <PROCESS>
-              <SHORT-NAME>planning_app</SHORT-NAME>
-              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/planning_app</EXECUTABLE-REF>
-              <PROCESS-STATE-MACHINE>
-                <SHORT-NAME>ProcessState</SHORT-NAME>
-                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
-              </PROCESS-STATE-MACHINE>
-              <MODE-DEPENDENT-STARTUP-CONFIGS>
                 <MODE-DEPENDENT-STARTUP-CONFIG>
                   <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Running</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
                   <STARTUP-CONFIG>
@@ -201,6 +133,32 @@
                 </MODE-DEPENDENT-STARTUP-CONFIG>
               </MODE-DEPENDENT-STARTUP-CONFIGS>
             </PROCESS>
+
+            <PROCESS>
+              <SHORT-NAME>planning_app</SHORT-NAME>
+              <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/planning_app</EXECUTABLE-REF>
+              <PROCESS-STATE-MACHINE>
+                <SHORT-NAME>ProcessState</SHORT-NAME>
+                <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
+              </PROCESS-STATE-MACHINE>
+              <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Init</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                  <STARTUP-CONFIG>
+                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=init</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
+                    <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
+                  </STARTUP-CONFIG>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Running</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                  <STARTUP-CONFIG>
+                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=run</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
+                    <TERMINATION-BEHAVIOR>PROCESS-IS-NOT-SELF-TERMINATING</TERMINATION-BEHAVIOR>
+                  </STARTUP-CONFIG>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
+              </MODE-DEPENDENT-STARTUP-CONFIGS>
+            </PROCESS>
+
             <PROCESS>
               <SHORT-NAME>control_app</SHORT-NAME>
               <EXECUTABLE-REF DEST="EXECUTABLE">/av/Executables/control_app</EXECUTABLE-REF>
@@ -209,6 +167,13 @@
                 <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/av/Exec/ProcessState</TYPE-TREF>
               </PROCESS-STATE-MACHINE>
               <MODE-DEPENDENT-STARTUP-CONFIGS>
+                <MODE-DEPENDENT-STARTUP-CONFIG>
+                  <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Init</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
+                  <STARTUP-CONFIG>
+                    <PROCESS-ARGUMENTS><PROCESS-ARGUMENT><ARGUMENT>--phase=init</ARGUMENT></PROCESS-ARGUMENT></PROCESS-ARGUMENTS>
+                    <TERMINATION-BEHAVIOR>PROCESS-IS-SELF-TERMINATING</TERMINATION-BEHAVIOR>
+                  </STARTUP-CONFIG>
+                </MODE-DEPENDENT-STARTUP-CONFIG>
                 <MODE-DEPENDENT-STARTUP-CONFIG>
                   <FUNCTION-GROUP-STATE-IREF><MODE-DECLARATION-REF DEST="MODE-DECLARATION">/av/Machine/DrivingFG/Running</MODE-DECLARATION-REF></FUNCTION-GROUP-STATE-IREF>
                   <STARTUP-CONFIG>
